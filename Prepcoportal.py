@@ -443,9 +443,6 @@ def admin_dashboard():
 # ──────────────────────────────────────────────
 # MAIN APP
 # ──────────────────────────────────────────────
-def main():
-    # ── Auth ──────────────────────────────────
-    if not GOOGLE_CLIENT_ID:
     def main():
     # ── Auth ──────────────────────────────────
     email, name, picture = login_wall()
