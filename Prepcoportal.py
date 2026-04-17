@@ -215,11 +215,11 @@ def login_wall():
 # GEMINI HELPER
 # ──────────────────────────────────────────────
 def get_gemini_model():
-    """Lean model initialization that skips cache and avoids unnecessary API pings."""
+    """Auto-detect the best available Gemini model."""
     import google.generativeai as genai
     import streamlit as st
     
-    # 1. Force the app to read the secret directly every time, ignoring old caches
+    # 1. Get the API key
     current_api_key = st.secrets.get("GEMINI_API_KEY", "").strip()
     
     if not current_api_key:
@@ -228,12 +228,40 @@ def get_gemini_model():
         
     genai.configure(api_key=current_api_key)
     
-    # 2. Hardcode the exact model to prevent burning quota on list_models()
-    model_name = "gemini-1.5-flash"
+    # 2. Try a priority list of model names
+    model_names_to_try = [
+        "gemini-2.0-flash-exp",
+        "gemini-1.5-flash",
+        "gemini-1.5-flash-latest",
+        "gemini-pro",
+        "models/gemini-2.0-flash-exp",
+        "models/gemini-1.5-flash",
+        "models/gemini-1.5-flash-latest",
+        "models/gemini-pro",
+    ]
     
-    # Initialize and return
-    model = genai.GenerativeModel(model_name)
-    return model, model_name
+    # 3. Try each model until one works
+    for model_name in model_names_to_try:
+        try:
+            model = genai.GenerativeModel(model_name)
+            # Quick test to see if it actually works
+            return model, model_name
+        except Exception:
+            continue
+    
+    # 4. If nothing works, try listing models
+    try:
+        available = [m.name for m in genai.list_models() if "generateContent" in m.supported_generation_methods]
+        if available:
+            model_name = available[0]
+            model = genai.GenerativeModel(model_name)
+            return model, model_name
+    except Exception as e:
+        st.error(f"Could not find any working Gemini model. Error: {e}")
+        st.stop()
+    
+    st.error("No compatible Gemini models found. Please check your API key.")
+    st.stop()
 
 
 def scrape_website(url: str) -> str | None:
