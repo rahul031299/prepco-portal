@@ -227,7 +227,7 @@ def get_gemini_model():
     genai.configure(api_key=current_api_key)
     
     # 2. Hardcode the exact model to prevent burning quota on list_models()
-    model_name = "models/gemini-3.1-flash"
+    model_name = "models/gemini-3.1-flash-lite"
     
     # Initialize and return
     model = genai.GenerativeModel(model_name)
