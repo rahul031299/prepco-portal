@@ -3,4 +3,4 @@ google-generativeai>=0.5
 requests
 beautifulsoup4
 supabase>=2.3
-streamlit-google-auth>=0.2
+streamlit-google-auth
