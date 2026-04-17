@@ -152,15 +152,15 @@ def get_supabase() -> Client:
     return create_client(SUPABASE_URL, SUPABASE_KEY)
 
 
-def get_or_create_user(email: str, name: str) -> dict:
-    """Return usage row for this user, creating it if absent."""
+def check_whitelist_and_get_user(email: str) -> dict:
+    """Check if user exists in Supabase. If yes, let them in. If no, block them."""
     sb = get_supabase()
     res = sb.table("usage").select("*").eq("email", email).execute()
+    
     if res.data:
-        return res.data[0]
-    new_row = {"email": email, "name": name, "runs": 0, "created_at": datetime.now(timezone.utc).isoformat()}
-    sb.table("usage").insert(new_row).execute()
-    return {**new_row, "runs": 0}
+        return res.data[0] # User found, let them in!
+    else:
+        return None # User not found in backend, block them.
 
 
 def increment_runs(email: str) -> int:
@@ -491,17 +491,24 @@ def main():
         email, name, picture, authenticator = login_wall()
 
     # ── Load / create user row ─────────────────
+    # ── Verify user against backend whitelist ─────────────────
     if SUPABASE_URL and SUPABASE_KEY:
-        user_row = get_or_create_user(email, name)
+        user_row = check_whitelist_and_get_user(email)
+        
+        # If the user is not found in Supabase, kick them out
+        if not user_row:
+            st.error(f"⛔ **Access Denied:** The email `{email}` is not on the PrepCo approved list. Please contact the Placement Committee.")
+            if authenticator:
+                authenticator.logout()
+            st.stop()
     else:
-        # No Supabase — unlimited dev mode
+        # Dev mode fallback if Supabase is offline
         if "dev_runs" not in st.session_state:
             st.session_state.dev_runs = 0
         user_row = {"email": email, "name": name, "runs": st.session_state.dev_runs}
-        st.warning("⚠️ Supabase not configured. Usage tracking disabled.")
+        st.warning("⚠️ Supabase not configured. Usage tracking and whitelist disabled.")
 
     runs_left = LIFETIME_RUN_LIMIT - user_row["runs"]
-
     # ── Header ────────────────────────────────
     st.markdown("""
     <div class='hero'>
