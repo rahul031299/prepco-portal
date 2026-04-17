@@ -189,23 +189,33 @@ def login_wall():
         st.error("Missing dependency: `streamlit-google-auth`. Add it to requirements.txt.")
         st.stop()
 
-    # Create credentials dict for streamlit-google-auth
-    credentials = {
+    import json
+    import os
+
+    # 1. Reconstruct the exact JSON structure Google Auth expects
+    credentials_dict = {
         "web": {
             "client_id": GOOGLE_CLIENT_ID,
-            "client_secret": GOOGLE_CLIENT_SECRET,
-            "redirect_uris": [st.secrets.get("REDIRECT_URI", "http://localhost:8501")],
+            "project_id": "prepco-portal",  # Generic placeholder, usually fine
             "auth_uri": "https://accounts.google.com/o/oauth2/auth",
             "token_uri": "https://oauth2.googleapis.com/token",
+            "auth_provider_x509_cert_url": "https://www.googleapis.com/oauth2/v1/certs",
+            "client_secret": GOOGLE_CLIENT_SECRET,
+            "redirect_uris": [st.secrets.get("REDIRECT_URI", "http://localhost:8501")]
         }
     }
 
+    # 2. Write it to a temporary file on the Streamlit server
+    temp_creds_path = "temp_google_credentials.json"
+    with open(temp_creds_path, "w") as f:
+        json.dump(credentials_dict, f)
+
+    # 3. Pass the PATH of the temporary file to the Authenticator
     authenticator = Authenticate(
-        secret_credentials_path=None,
+        secret_credentials_path=temp_creds_path,
         cookie_name="prepco_session",
         cookie_key=st.secrets.get("COOKIE_KEY", "prepco-secret-key-2024"),
-        redirect_uri=st.secrets.get("REDIRECT_URI", "http://localhost:8501"),
-        credentials=credentials,
+        redirect_uri=st.secrets.get("REDIRECT_URI", "http://localhost:8501")
     )
 
     authenticator.check_authentification()
@@ -236,7 +246,6 @@ def login_wall():
         st.session_state.get("picture", ""),
         authenticator,
     )
-
 # ──────────────────────────────────────────────
 # GEMINI HELPER
 # ──────────────────────────────────────────────
