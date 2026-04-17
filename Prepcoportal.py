@@ -189,13 +189,23 @@ def login_wall():
         st.error("Missing dependency: `streamlit-google-auth`. Add it to requirements.txt.")
         st.stop()
 
+    # Create credentials dict for streamlit-google-auth
+    credentials = {
+        "web": {
+            "client_id": GOOGLE_CLIENT_ID,
+            "client_secret": GOOGLE_CLIENT_SECRET,
+            "redirect_uris": [st.secrets.get("REDIRECT_URI", "http://localhost:8501")],
+            "auth_uri": "https://accounts.google.com/o/oauth2/auth",
+            "token_uri": "https://oauth2.googleapis.com/token",
+        }
+    }
+
     authenticator = Authenticate(
         secret_credentials_path=None,
         cookie_name="prepco_session",
         cookie_key=st.secrets.get("COOKIE_KEY", "prepco-secret-key-2024"),
         redirect_uri=st.secrets.get("REDIRECT_URI", "http://localhost:8501"),
-        google_client_id=GOOGLE_CLIENT_ID,
-        google_client_secret=GOOGLE_CLIENT_SECRET,
+        credentials=credentials,
     )
 
     authenticator.check_authentification()
