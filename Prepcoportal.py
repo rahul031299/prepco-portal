@@ -6,6 +6,8 @@ from supabase import create_client, Client
 import json
 from datetime import datetime, timezone
 
+
+
 # ──────────────────────────────────────────────
 # PAGE CONFIG
 # ──────────────────────────────────────────────
@@ -227,7 +229,7 @@ def get_gemini_model():
     genai.configure(api_key=current_api_key)
     
     # 2. Hardcode the exact model to prevent burning quota on list_models()
-    model_name = "models/gemini-2.5 Flash-Lite"
+    model_name = "models/gemini-1.5 Flash"
     
     # Initialize and return
     model = genai.GenerativeModel(model_name)
