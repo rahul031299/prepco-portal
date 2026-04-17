@@ -204,10 +204,10 @@ def login_wall():
                 st.rerun()
             else:
                 # Login Failed
-                st.error(f"⛔ Access Denied: '{email_clean}' is not on the approved list. Contact the Placement Committee.")
+                st.error(f"⛔ Access Denied: '{email_clean}' is not on the approved list. Contact the Preparatory Committee.")
                 st.stop()
 
-    st.markdown('<div class="footer">PrepCo · IIM Nagpur Placement Committee · 2024–25</div>', unsafe_allow_html=True)
+    st.markdown('<div class="footer">PrepCo · IIM Nagpur Preparatory Committee · 2024–25</div>', unsafe_allow_html=True)
     st.stop()
 # ──────────────────────────────────────────────
 # GEMINI HELPER
@@ -536,7 +536,7 @@ def main():
         tool_interview(user_row)
 
     # ── Footer ────────────────────────────────
-    st.markdown('<div class="footer">PrepCo · IIM Nagpur Placement Committee · 2024–25 · Built with Streamlit</div>',
+    st.markdown('<div class="footer">PrepCo · IIM Nagpur Preparatory Committee · 2025–27 · Built with Streamlit</div>',
                 unsafe_allow_html=True)
 
 
