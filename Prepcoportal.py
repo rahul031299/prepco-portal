@@ -212,20 +212,26 @@ def login_wall():
 # ──────────────────────────────────────────────
 # GEMINI HELPER
 # ──────────────────────────────────────────────
-@st.cache_resource
 def get_gemini_model():
-    genai.configure(api_key=GEMINI_API_KEY)
-    preferred = ["models/gemini-2.0-flash", "models/gemini-1.5-flash", "models/gemini-pro"]
-    try:
-        available = [m.name for m in genai.list_models() if "generateContent" in m.supported_generation_methods]
-        for p in preferred:
-            if p in available:
-                return genai.GenerativeModel(p), p
-        if available:
-            return genai.GenerativeModel(available[0]), available[0]
-    except Exception:
-        pass
-    return genai.GenerativeModel("models/gemini-1.5-flash"), "models/gemini-1.5-flash"
+    """Lean model initialization that skips cache and avoids unnecessary API pings."""
+    import google.generativeai as genai
+    import streamlit as st
+    
+    # 1. Force the app to read the secret directly every time, ignoring old caches
+    current_api_key = st.secrets.get("GEMINI_API_KEY", "").strip()
+    
+    if not current_api_key:
+        st.error("API Key is missing from Streamlit Secrets.")
+        st.stop()
+        
+    genai.configure(api_key=current_api_key)
+    
+    # 2. Hardcode the exact model to prevent burning quota on list_models()
+    model_name = "models/gemini-3.1-flash"
+    
+    # Initialize and return
+    model = genai.GenerativeModel(model_name)
+    return model, model_name
 
 
 def scrape_website(url: str) -> str | None:
