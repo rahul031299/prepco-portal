@@ -158,94 +158,57 @@ def check_whitelist_and_get_user(email: str) -> dict:
     res = sb.table("usage").select("*").eq("email", email).execute()
     
     if res.data:
-        return res.data[0] # User found, let them in!
+        return res.data[0] # User found in backend!
     else:
-        return None # User not found in backend, block them.
+        return None # User not found, block them.
 
-
-def increment_runs(email: str) -> int:
-    """Increment run count and return new total."""
-    sb = get_supabase()
-    res = sb.table("usage").select("runs").eq("email", email).execute()
-    current = res.data[0]["runs"] if res.data else 0
-    new_val = current + 1
-    sb.table("usage").update({"runs": new_val, "last_run": datetime.now(timezone.utc).isoformat()}).eq("email", email).execute()
-    return new_val
-
-
-def get_all_usage() -> list:
-    sb = get_supabase()
-    res = sb.table("usage").select("*").order("runs", desc=True).execute()
-    return res.data or []
-
-# ──────────────────────────────────────────────
-# GOOGLE OAUTH  (via streamlit-google-auth)
-# ──────────────────────────────────────────────
 def login_wall():
-    """Show login UI and return (email, name, picture) or None if not logged in."""
-    try:
-        from streamlit_google_auth import Authenticate
-    except ImportError:
-        st.error("Missing dependency: `streamlit-google-auth`. Add it to requirements.txt.")
-        st.stop()
+    """Show a simple email login UI and return (email, name, picture)."""
+    # Initialize session state for login
+    if "connected" not in st.session_state:
+        st.session_state.connected = False
 
-    import json
-    import os
+    # If already logged in, bypass the wall
+    if st.session_state.connected:
+        return st.session_state.email, st.session_state.name, ""
 
-    # 1. Reconstruct the exact JSON structure Google Auth expects
-    credentials_dict = {
-        "web": {
-            "client_id": GOOGLE_CLIENT_ID,
-            "project_id": "prepco-portal",  # Generic placeholder, usually fine
-            "auth_uri": "https://accounts.google.com/o/oauth2/auth",
-            "token_uri": "https://oauth2.googleapis.com/token",
-            "auth_provider_x509_cert_url": "https://www.googleapis.com/oauth2/v1/certs",
-            "client_secret": GOOGLE_CLIENT_SECRET,
-            "redirect_uris": [st.secrets.get("REDIRECT_URI", "http://localhost:8501")]
-        }
-    }
+    # The Login Screen
+    st.markdown("""
+    <div class='hero'>
+      <h1>🎯 PrepCo</h1>
+      <p>IIM Nagpur · Placement Preparation Portal</p>
+    </div>
+    """, unsafe_allow_html=True)
+    
+    col1, col2, col3 = st.columns([1, 2, 1])
+    with col2:
+        st.info("Enter your approved IIMN email address to access the portal.")
+        email_input = st.text_input("Email Address", placeholder="name@iimn.ac.in")
+        
+        if st.button("Access Portal", type="primary", use_container_width=True):
+            if not email_input:
+                st.warning("Please enter your email.")
+                st.stop()
+                
+            email_clean = email_input.strip().lower()
+            
+            # Check the Supabase database
+            with st.spinner("Verifying access..."):
+                user_row = check_whitelist_and_get_user(email_clean)
+                
+            if user_row:
+                # Login Success
+                st.session_state.connected = True
+                st.session_state.email = user_row["email"]
+                st.session_state.name = user_row["name"]
+                st.rerun()
+            else:
+                # Login Failed
+                st.error(f"⛔ Access Denied: '{email_clean}' is not on the approved list. Contact the Placement Committee.")
+                st.stop()
 
-    # 2. Write it to a temporary file on the Streamlit server
-    temp_creds_path = "temp_google_credentials.json"
-    with open(temp_creds_path, "w") as f:
-        json.dump(credentials_dict, f)
-
-    # 3. Pass the PATH of the temporary file to the Authenticator
-    authenticator = Authenticate(
-        secret_credentials_path=temp_creds_path,
-        cookie_name="prepco_session",
-        cookie_key=st.secrets.get("COOKIE_KEY", "prepco-secret-key-2024"),
-        redirect_uri=st.secrets.get("REDIRECT_URI", "http://localhost:8501")
-    )
-
-    authenticator.check_authentification()
-
-    if not st.session_state.get("connected"):
-        st.markdown("""
-        <div class='hero'>
-          <h1>🎯 PrepCo</h1>
-          <p>IIM Nagpur · Placement Preparation Portal</p>
-        </div>
-        """, unsafe_allow_html=True)
-        col1, col2, col3 = st.columns([1, 2, 1])
-        with col2:
-            st.info(f"Sign in with your **{ALLOWED_DOMAIN}** Google account to continue.")
-            authenticator.login()
-        st.markdown('<div class="footer">PrepCo · IIM Nagpur Placement Committee · 2024–25</div>', unsafe_allow_html=True)
-        st.stop()
-
-    email = st.session_state.get("email", "")
-    if ALLOWED_DOMAIN and not email.endswith(ALLOWED_DOMAIN):
-        st.error(f"Access restricted to **{ALLOWED_DOMAIN}** accounts. You signed in as `{email}`.")
-        authenticator.logout()
-        st.stop()
-
-    return (
-        email,
-        st.session_state.get("name", email.split("@")[0].title()),
-        st.session_state.get("picture", ""),
-        authenticator,
-    )
+    st.markdown('<div class="footer">PrepCo · IIM Nagpur Placement Committee · 2024–25</div>', unsafe_allow_html=True)
+    st.stop()
 # ──────────────────────────────────────────────
 # GEMINI HELPER
 # ──────────────────────────────────────────────
@@ -483,33 +446,20 @@ def admin_dashboard():
 def main():
     # ── Auth ──────────────────────────────────
     if not GOOGLE_CLIENT_ID:
-        # Dev fallback: skip OAuth, use a dummy user
-        st.warning("⚠️ Google OAuth not configured. Running in dev mode.")
-        email, name, picture = "dev@iimn.ac.in", "Dev User", ""
-        authenticator = None
-    else:
-        email, name, picture, authenticator = login_wall()
+    def main():
+    # ── Auth ──────────────────────────────────
+    email, name, picture = login_wall()
 
-    # ── Load / create user row ─────────────────
-    # ── Verify user against backend whitelist ─────────────────
+    # ── Load user row ─────────────────
     if SUPABASE_URL and SUPABASE_KEY:
         user_row = check_whitelist_and_get_user(email)
-        
-        # If the user is not found in Supabase, kick them out
-        if not user_row:
-            st.error(f"⛔ **Access Denied:** The email `{email}` is not on the PrepCo approved list. Please contact the Placement Committee.")
-            if authenticator:
-                authenticator.logout()
-            st.stop()
     else:
-        # Dev mode fallback if Supabase is offline
-        if "dev_runs" not in st.session_state:
-            st.session_state.dev_runs = 0
-        user_row = {"email": email, "name": name, "runs": st.session_state.dev_runs}
-        st.warning("⚠️ Supabase not configured. Usage tracking and whitelist disabled.")
+        st.error("Supabase database is not connected. Whitelist offline.")
+        st.stop()
 
     runs_left = LIFETIME_RUN_LIMIT - user_row["runs"]
-    # ── Header ────────────────────────────────
+
+    # ... [Keep your Header, User Pill, and Quota Bar code exactly the same] ...    # ── Header ────────────────────────────────
     st.markdown("""
     <div class='hero'>
       <h1>🎯 PrepCo</h1>
@@ -545,13 +495,19 @@ def main():
         st.markdown(f"**{name}**")
         st.caption(email)
         st.markdown("---")
-        if authenticator:
-            authenticator.logout()
+        
+        # New simple logout button
+        if st.button("🚪 Logout"):
+            st.session_state.connected = False
+            st.rerun()
+            
         if email.strip() in [a.strip() for a in ADMIN_EMAILS if a.strip()]:
             if st.button("🛡️ Admin Dashboard"):
                 st.session_state["page"] = "admin"
         if st.button("🏠 Home"):
             st.session_state["page"] = "home"
+
+    # ... [Keep the rest of your main() function exactly the same] ...
 
     # ── Admin page ────────────────────────────
     if st.session_state.get("page") == "admin":
