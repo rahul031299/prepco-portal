@@ -230,7 +230,7 @@ def get_gemini_model():
     
     # 2. Try a priority list of model names
     model_names_to_try = [
-        "models/gemini-1.5-flash"
+        "gemini-2.5-flash"
     ]
     
     # 3. Try each model until one works
