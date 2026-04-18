@@ -137,7 +137,7 @@ st.markdown("""
 # ──────────────────────────────────────────────
 # CONFIG & SECRETS
 # ──────────────────────────────────────────────
-ALLOWED_DOMAIN      = st.secrets.get("ALLOWED_DOMAIN", "@iimn.ac.in")
+ALLOWED_DOMAIN      = st.secrets.get("ALLOWED_DOMAIN", "@iimnagpur.ac.in")
 LIFETIME_RUN_LIMIT  = int(st.secrets.get("LIFETIME_RUN_LIMIT", 25))
 GEMINI_API_KEY      = st.secrets.get("GEMINI_API_KEY", "")
 SUPABASE_URL        = st.secrets.get("SUPABASE_URL", "")
@@ -185,7 +185,7 @@ def login_wall():
     col1, col2, col3 = st.columns([1, 2, 1])
     with col2:
         st.info("Enter your approved IIMN email address to access the portal.")
-        email_input = st.text_input("Email Address", placeholder="name@iimn.ac.in")
+        email_input = st.text_input("Email Address", placeholder="name@iimnagpur.ac.in")
         
         if st.button("Access Portal", type="primary", use_container_width=True):
             if not email_input:
@@ -209,7 +209,7 @@ def login_wall():
                 st.error(f"⛔ Access Denied: '{email_clean}' is not on the approved list. Contact the Preparatory Committee.")
                 st.stop()
 
-    st.markdown('<div class="footer">PrepCo · IIM Nagpur Preparatory Committee · 2024–25</div>', unsafe_allow_html=True)
+    st.markdown('<div class="footer">PrepCo · IIM Nagpur Preparatory Committee · 2025–27</div>', unsafe_allow_html=True)
     st.stop()
 # ──────────────────────────────────────────────
 # GEMINI HELPER
