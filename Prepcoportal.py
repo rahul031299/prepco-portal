@@ -137,7 +137,7 @@ st.markdown("""
 # ──────────────────────────────────────────────
 # CONFIG & SECRETS
 # ──────────────────────────────────────────────
-ALLOWED_DOMAIN      = st.secrets.get("ALLOWED_DOMAIN", "@iimnagpur.ac.in")
+ALLOWED_DOMAIN      = st.secrets.get("ALLOWED_DOMAIN", "@iimn.ac.in")
 LIFETIME_RUN_LIMIT  = int(st.secrets.get("LIFETIME_RUN_LIMIT", 25))
 GEMINI_API_KEY      = st.secrets.get("GEMINI_API_KEY", "")
 SUPABASE_URL        = st.secrets.get("SUPABASE_URL", "")
@@ -164,6 +164,34 @@ def check_whitelist_and_get_user(email: str) -> dict:
     else:
         return None # User not found, block them.
 
+
+def get_or_create_user(email: str, name: str) -> dict:
+    """Return usage row for this user, creating it if absent."""
+    sb = get_supabase()
+    res = sb.table("usage").select("*").eq("email", email).execute()
+    if res.data:
+        return res.data[0]
+    new_row = {"email": email, "name": name, "runs": 0, "created_at": datetime.now(timezone.utc).isoformat()}
+    sb.table("usage").insert(new_row).execute()
+    return {**new_row, "runs": 0}
+
+
+def increment_runs(email: str) -> int:
+    """Increment run count and return new total."""
+    sb = get_supabase()
+    res = sb.table("usage").select("runs").eq("email", email).execute()
+    current = res.data[0]["runs"] if res.data else 0
+    new_val = current + 1
+    sb.table("usage").update({"runs": new_val, "last_run": datetime.now(timezone.utc).isoformat()}).eq("email", email).execute()
+    return new_val
+
+
+def get_all_usage() -> list:
+    """Get all user records for admin dashboard."""
+    sb = get_supabase()
+    res = sb.table("usage").select("*").order("runs", desc=True).execute()
+    return res.data or []
+
 def login_wall():
     """Show a simple email login UI and return (email, name, picture)."""
     # Initialize session state for login
@@ -185,7 +213,7 @@ def login_wall():
     col1, col2, col3 = st.columns([1, 2, 1])
     with col2:
         st.info("Enter your approved IIMN email address to access the portal.")
-        email_input = st.text_input("Email Address", placeholder="name@iimnagpur.ac.in")
+        email_input = st.text_input("Email Address", placeholder="name@iimn.ac.in")
         
         if st.button("Access Portal", type="primary", use_container_width=True):
             if not email_input:
@@ -209,7 +237,7 @@ def login_wall():
                 st.error(f"⛔ Access Denied: '{email_clean}' is not on the approved list. Contact the Preparatory Committee.")
                 st.stop()
 
-    st.markdown('<div class="footer">PrepCo · IIM Nagpur Preparatory Committee · 2025–27</div>', unsafe_allow_html=True)
+    st.markdown('<div class="footer">PrepCo · IIM Nagpur Preparatory Committee · 2024–25</div>', unsafe_allow_html=True)
     st.stop()
 # ──────────────────────────────────────────────
 # GEMINI HELPER
@@ -230,7 +258,7 @@ def get_gemini_model():
     
     # 2. Try a priority list of model names
     model_names_to_try = [
-        "gemini-2.5-flash"
+        "gemini-2.5-flash-lite"
     ]
     
     # 3. Try each model until one works
