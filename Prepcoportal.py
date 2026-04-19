@@ -488,7 +488,7 @@ if st.button(""Generate Research Briefing"", type=""primary""):
                 model = genai.GenerativeModel(active_model)
 
                 # 3. THE 5-MINUTE DOSSIER PROMPT
-                full_prompt = f"""""
+                full_prompt = f"""
                 Act as an elite corporate intelligence researcher and MBA Career Coach. Your task is to generate a comprehensive but highly scannable ""5-Minute Interview Dossier"" for a candidate interviewing at {company_name} for the {job_role} position.
                 {live_context}
                 
@@ -535,7 +535,7 @@ if st.button(""Generate Research Briefing"", type=""primary""):
                   * *Why this works:* [Brief rationale]
                 * **Question 3:** [Culture, team-dynamics, or success-metric question]
                   * *Why this works:* [Brief rationale]
-                """""
+                """
 
                 # 4. GENERATE
                 response = model.generate_content(full_prompt)
