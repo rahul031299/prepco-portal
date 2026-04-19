@@ -314,34 +314,51 @@ def tool_resume(user_row: dict):
 
         with st.spinner("Optimising for IIMN guidelines..."):
             model, model_name = get_gemini_model()
-            prompt = f"""
-ROLE: IIM Nagpur Resume Optimization Engine.
-TASK: Convert the input text into 3 high-impact resume bullet points.
+            prompt = f""" Here is an upgraded, comprehensive version of your prompt. It directly integrates the specific STAR domain examples from the PrepCo guidelines and categorizes the power verbs to ensure the generated variations are highly targeted and impactful for the 700 students utilizing the optimization tool. 
 
---- IIM NAGPUR GUIDELINES (NON-NEGOTIABLE) ---
-1. LENGTH: Max 14 words OR 120 characters per point. [Strict Constraint]
-2. SYNTAX: Start with a strong POWER VERB. Use Active Voice. Use Past Tense.
-3. STAR FRAMEWORK: Context (Situation) -> Action -> Result (Impact).
-4. QUANTIFICATION: You MUST include numbers/metrics (%, $, time saved). If missing, use placeholders like [X]%.
-5. FORBIDDEN WORDS: Never use 'worked on', 'helped', 'responsible for', 'managed team' (unless specific).
+You can copy and paste this directly into your system.
+
+***
+
+### Improved Resume Optimization Prompt
+
+```text
+ROLE: IIM Nagpur Resume Optimization Engine.
+TASK: Convert the input text into 3 high-impact resume bullet points tailored to specific domains.
+
+--- IIM NAGPUR PREPCO GUIDELINES (NON-NEGOTIABLE) ---
+1. [cite_start]LENGTH: Max 14 words OR 120 characters per point[cite: 452]. [Strict Constraint]
+2. [cite_start]SYNTAX: Begin each bullet point with a strong action verb[cite: 453]. [cite_start]Use Active voice[cite: 462]. [cite_start]Prefer past tense, unless it's an ongoing responsibility[cite: 463].
+3. [cite_start]STAR FRAMEWORK: Situation (Context) -> Task -> Action -> Result (Impact)[cite: 455, 471, 472, 474, 475].
+4. [cite_start]QUANTIFICATION: You MUST include quantifiable outcomes: numbers, %, timelines, growth metrics[cite: 454]. If missing, use placeholders like [X]%. 
+5. [cite_start]CLARITY: Each point must be crisp and result-oriented[cite: 462]. [cite_start]A recruiter should understand the impact in 5 seconds[cite: 464].
+6. [cite_start]FORBIDDEN WORDS: Do not write generic or vague points like ""worked on a project"" or ""helped the team""[cite: 456].
+
+--- HIGH-IMPACT POWER VERBS TO UTILIZE ---
+* [cite_start]For Consulting/Strategy: Analyzed [cite: 262][cite_start], Formulated [cite: 279][cite_start], Recommended [cite: 270][cite_start], Streamlined [cite: 256][cite_start], Evaluated [cite: 11][cite_start], Diagnosed[cite: 264].
+* [cite_start]For Finance/Analytical: Reconciled [cite: 303][cite_start], Audited [cite: 315][cite_start], Appraised [cite: 313][cite_start], Calculated [cite: 318][cite_start], Forecasted [cite: 12][cite_start], Projected[cite: 287].
+* [cite_start]For General Mgmt/Ops: Automated [cite: 558][cite_start], Orchestrated [cite: 223][cite_start], Executed [cite: 80][cite_start], Supervised [cite: 130][cite_start], Spearheaded [cite: 157][cite_start], Accelerated[cite: 153].
 
 --- TRAINING EXAMPLES (FROM OFFICIAL GUIDE) ---
-* BAD: "Worked on a sales project."
-* GOOD (Sales): "Converted 30+ B2B leads via cold calls, achieving 20% monthly revenue growth."
-* GOOD (Marketing): "Boosted Meta Ads ROAS by 2.1x using A/B tested creatives and landing pages."
-* GOOD (Consulting): "Analysed 5 client portfolios, recommended 3 strategy shifts, boosting efficiency by 12%."
-* GOOD (Ops): "Automated purchase order flow, reducing manual effort by 8 hours/week using workflow tools."
-* GOOD (Finance): "Reconciled financial data of 3 quarters, identifying errors worth 5L in reporting."
+* [cite_start]BAD: ""Worked on a project."" [cite: 456]
+* [cite_start]GOOD (Sales): ""Converted 30+ B2B leads via cold calls, achieving 20% monthly revenue growth""[cite: 484].
+* [cite_start]GOOD (Marketing): ""Boosted Meta Ads ROAS by 2.1x using A/B tested creatives and landing pages""[cite: 505].
+* [cite_start]GOOD (Consulting): ""Analysed 5 client portfolios, recommended 3 strategy shifts, boosting efficiency by 12%""[cite: 521].
+* [cite_start]GOOD (Finance): ""Reconciled financial data of 3 quarters, identifying errors worth ₹5L in reporting""[cite: 539].
+* [cite_start]GOOD (Operations): ""Automated purchase order flow, reducing manual effort by 8 hours/week using workflow tools""[cite: 558].
+* [cite_start]GOOD (HR): ""Built an HR dashboard for attrition tracking, reducing reporting time by 40%""[cite: 585].
+* [cite_start]GOOD (Gen Management): ""Led cross-functional team of 8 to execute CSR campaign impacting 500+ rural students""[cite: 594].
 
 --- USER INPUT ---
 {user_text}
 
 --- OUTPUT INSTRUCTIONS ---
-Provide 3 variations. Ensure every point is under 120 characters.
-
-1. **Consulting/Strategy Style** (Focus: Efficiency, Analysis, Recommendations)
-2. **Finance/Analytical Style** (Focus: Accuracy, Audit, Numbers, Budget)
-3. **General Mgmt/Ops Style** (Focus: Leadership, Execution, Timelines, Stakeholders)
+Provide 3 variations based on the user input. [cite_start]Ensure EVERY point is strictly under 14 words OR 120 characters[cite: 452]. 
+ 
+1. **Consulting/Strategy Style** (Focus: Efficiency, Analysis, Recommendations. Use Problem-Solving Verbs).
+2. **Finance/Analytical Style** (Focus: Accuracy, Audit, Numbers, Budget. Use Quantitative Verbs).
+3. **General Mgmt/Ops Style** (Focus: Leadership, Execution, Timelines, Stakeholders. Use Leading & Getting Results Verbs).
+```
 """
             try:
                 response = model.generate_content(prompt)
