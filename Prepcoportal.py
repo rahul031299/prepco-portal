@@ -311,7 +311,7 @@ def login_wall():
     # The Login Screen
     st.markdown("""
     <div class='hero'>
-      <h1>🎯 PrepCo</h1>
+      <h1>PrepCo</h1>
       <p>IIM Nagpur · Placement Preparation Portal</p>
     </div>
     """, unsafe_allow_html=True)
