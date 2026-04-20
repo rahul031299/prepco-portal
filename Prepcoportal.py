@@ -251,6 +251,7 @@ SUPABASE_KEY        = st.secrets.get("SUPABASE_KEY", "")
 GOOGLE_CLIENT_ID    = st.secrets.get("GOOGLE_CLIENT_ID", "")
 GOOGLE_CLIENT_SECRET = st.secrets.get("GOOGLE_CLIENT_SECRET", "")
 ADMIN_EMAILS        = st.secrets.get("ADMIN_EMAILS", "").split(",")
+DRIVE_FOLDER_ID     = st.secrets.get("DRIVE_FOLDER_ID", "")
 
 # ──────────────────────────────────────────────
 # SUPABASE CLIENT
@@ -581,6 +582,22 @@ def tool_interview(user_row: dict):
                     st.error(f"Error: {e}")
 
 # ──────────────────────────────────────────────
+# TOOL 3 — PREP DOCUMENTS (GOOGLE DRIVE)
+# ──────────────────────────────────────────────
+def tool_drive_documents():
+    import streamlit.components.v1 as components
+    st.markdown("### 📁 Prep Documents")
+    st.caption("Access shared preparation materials from Google Drive directly.")
+    
+    if not DRIVE_FOLDER_ID:
+        st.warning("⚠️ The Drive Folder ID is not configured in the secrets yet. Please add `DRIVE_FOLDER_ID` to your `.streamlit/secrets.toml`.")
+        return
+        
+    with st.spinner("Loading Drive folder..."):
+        drive_url = f"https://drive.google.com/embeddedfolderview?id={DRIVE_FOLDER_ID}#grid"
+        components.iframe(drive_url, width=None, height=600, scrolling=True)
+
+# ──────────────────────────────────────────────
 # ADMIN DASHBOARD
 # ──────────────────────────────────────────────
 def admin_dashboard():
@@ -696,7 +713,7 @@ def main():
 
     # ── Tool selector ─────────────────────────
     st.markdown("#### Choose a tool")
-    col1, col2 = st.columns(2)
+    col1, col2, col3 = st.columns(3)
     with col1:
         if st.button("📝  Resume Agent\n\nTransform rough notes into IIMN-compliant CV bullets",
                      use_container_width=True):
@@ -705,6 +722,10 @@ def main():
         if st.button("🎯  Interview Intel\n\nGenerate a 5-min company research dossier",
                      use_container_width=True):
             st.session_state["tool"] = "interview"
+    with col3:
+        if st.button("📁  Prep Documents\n\nAccess shared preparation materials directly",
+                     use_container_width=True):
+            st.session_state["tool"] = "drive"
 
     st.markdown('<hr class="section-divider">', unsafe_allow_html=True)
 
@@ -712,8 +733,10 @@ def main():
     tool = st.session_state.get("tool", "resume")
     if tool == "resume":
         tool_resume(user_row)
-    else:
+    elif tool == "interview":
         tool_interview(user_row)
+    elif tool == "drive":
+        tool_drive_documents()
 
     # ── Footer ────────────────────────────────
     st.markdown('<div class="footer">PrepCo · IIM Nagpur Preparatory Committee · 2025–27 · Built with Streamlit</div>',
