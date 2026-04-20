@@ -23,113 +23,219 @@ st.set_page_config(
 # ──────────────────────────────────────────────
 st.markdown("""
 <style>
-  @import url('https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=DM+Sans:wght@400;500;600&display=swap');
+  @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&family=Inter:wght@400;500;600&display=swap');
 
+  /* Base App Styling & Typography */
   html, body, [class*="css"] {
-    font-family: 'DM Sans', sans-serif;
+    font-family: 'Inter', sans-serif;
+    color: #0f172a;
   }
-  h1, h2, h3 {
-    font-family: 'DM Serif Display', serif !important;
+  
+  /* Make the main app container have a subtle mesh-like gradient background */
+  .stApp {
+    background: radial-gradient(circle at top left, #f3e8ff 0%, #f8fafc 30%, #f8fafc 70%, #e0e7ff 100%);
   }
+
+  h1, h2, h3, h4, h5 {
+    font-family: 'Outfit', sans-serif !important;
+    font-weight: 700 !important;
+    letter-spacing: -0.02em;
+  }
+  
+  /* Hero Section */
   .hero {
     text-align: center;
-    padding: 2.5rem 0 1.5rem;
+    padding: 3rem 0 2rem;
+    animation: fadeInDown 0.8s ease-out;
   }
   .hero h1 {
-    font-size: 2.6rem;
-    margin-bottom: 0.3rem;
-    color: #1a1a2e;
+    font-size: 3.5rem;
+    margin-bottom: 0.5rem;
+    background: linear-gradient(135deg, #4f46e5, #d946ef);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    display: inline-block;
   }
   .hero p {
-    color: #555;
-    font-size: 1rem;
+    color: #64748b;
+    font-size: 1.1rem;
+    font-weight: 500;
+    letter-spacing: 0.02em;
   }
+
+  /* Quota Bar */
   .quota-bar-wrap {
-    background: #e8e8ef;
-    border-radius: 8px;
-    height: 8px;
-    margin: 6px 0 2px;
+    background: rgba(226, 232, 240, 0.6);
+    border-radius: 999px;
+    height: 10px;
+    margin: 8px 0 4px;
     overflow: hidden;
+    backdrop-filter: blur(4px);
+    box-shadow: inset 0 2px 4px rgba(0,0,0,0.05);
   }
   .quota-bar-fill {
-    height: 8px;
-    border-radius: 8px;
-    background: linear-gradient(90deg, #4f46e5, #7c3aed);
-    transition: width 0.4s ease;
+    height: 10px;
+    border-radius: 999px;
+    background: linear-gradient(90deg, #4f46e5, #8b5cf6, #d946ef);
+    transition: width 0.8s cubic-bezier(0.4, 0, 0.2, 1);
+    box-shadow: 0 0 10px rgba(139, 92, 246, 0.5);
   }
+
+  /* Buttons - Premium Styling */
+  .stButton > button {
+    border-radius: 12px !important;
+    font-family: 'Inter', sans-serif !important;
+    font-weight: 600 !important;
+    letter-spacing: 0.01em !important;
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1) !important;
+    border: 1px solid rgba(226, 232, 240, 0.8) !important;
+    background: rgba(255, 255, 255, 0.7) !important;
+    color: #334155 !important;
+    backdrop-filter: blur(10px) !important;
+    box-shadow: 0 2px 6px rgba(15, 23, 42, 0.04) !important;
+  }
+  
+  .stButton > button:hover {
+    transform: translateY(-2px) !important;
+    box-shadow: 0 8px 16px rgba(15, 23, 42, 0.08) !important;
+    border-color: #cbd5e1 !important;
+  }
+
+  .stButton > button[kind="primary"] {
+    background: linear-gradient(135deg, #4f46e5, #7c3aed) !important;
+    border: none !important;
+    color: white !important;
+    box-shadow: 0 4px 12px rgba(79, 70, 229, 0.3) !important;
+  }
+  
+  .stButton > button[kind="primary"]:hover {
+    background: linear-gradient(135deg, #4338ca, #6d28d9) !important;
+    box-shadow: 0 8px 20px rgba(79, 70, 229, 0.4) !important;
+  }
+
+  /* Inputs and Text Areas - Glassmorphism */
+  .stTextInput > div > div > input, 
+  .stTextArea > div > div > textarea {
+    border-radius: 12px !important;
+    border: 1px solid rgba(203, 213, 225, 0.6) !important;
+    background: rgba(255, 255, 255, 0.6) !important;
+    backdrop-filter: blur(8px) !important;
+    padding: 0.75rem 1rem !important;
+    font-size: 1rem !important;
+    transition: all 0.2s ease !important;
+    box-shadow: inset 0 2px 4px rgba(0,0,0,0.02) !important;
+  }
+  
+  .stTextInput > div > div > input:focus, 
+  .stTextArea > div > div > textarea:focus {
+    border-color: #8b5cf6 !important;
+    box-shadow: 0 0 0 3px rgba(139, 92, 246, 0.2), inset 0 2px 4px rgba(0,0,0,0.02) !important;
+    background: rgba(255, 255, 255, 0.9) !important;
+  }
+
+  /* User Pill */
+  .user-pill {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    background: rgba(255, 255, 255, 0.7);
+    border: 1px solid rgba(226, 232, 240, 0.8);
+    backdrop-filter: blur(10px);
+    border-radius: 40px;
+    padding: 8px 18px 8px 10px;
+    width: fit-content;
+    margin: 0 auto 2rem;
+    font-size: 14px;
+    font-weight: 500;
+    color: #475569;
+    box-shadow: 0 4px 12px rgba(15, 23, 42, 0.05);
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+  }
+  .user-pill:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 16px rgba(15, 23, 42, 0.08);
+  }
+  .user-pill img {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    border: 2px solid white;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+  }
+
+  /* Expanders */
+  div[data-testid="stExpander"] {
+    border-radius: 12px !important;
+    border: 1px solid rgba(226, 232, 240, 0.8) !important;
+    background: rgba(255, 255, 255, 0.5) !important;
+    backdrop-filter: blur(8px) !important;
+    overflow: hidden !important;
+    box-shadow: 0 2px 8px rgba(15, 23, 42, 0.02) !important;
+  }
+  div[data-testid="stExpander"] summary {
+    font-weight: 600 !important;
+    color: #1e293b !important;
+  }
+
+  /* Information / Alert boxes */
+  .stAlert {
+    border-radius: 12px !important;
+    border: none !important;
+    box-shadow: 0 4px 12px rgba(15, 23, 42, 0.04) !important;
+  }
+
+  /* Custom Dividers */
+  .section-divider {
+    border: none;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, rgba(203, 213, 225, 0.8), transparent);
+    margin: 2.5rem 0;
+  }
+
+  /* Footer */
+  .footer {
+    text-align: center;
+    font-size: 13px;
+    color: #94a3b8;
+    margin-top: 4rem;
+    padding-bottom: 2rem;
+    font-weight: 500;
+  }
+
+  /* Animations */
+  @keyframes fadeInDown {
+    from { opacity: 0; transform: translateY(-20px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+  
+  /* Tool Card fixes */
   .tool-card {
-    border: 1.5px solid #e2e2ef;
+    border: 1px solid rgba(226, 232, 240, 0.8);
     border-radius: 14px;
     padding: 1.4rem 1.6rem;
     margin-bottom: 1rem;
     cursor: pointer;
-    transition: border-color 0.15s, box-shadow 0.15s;
-    background: white;
+    transition: all 0.2s ease;
+    background: rgba(255, 255, 255, 0.7);
+    backdrop-filter: blur(10px);
   }
   .tool-card:hover {
-    border-color: #4f46e5;
-    box-shadow: 0 4px 16px rgba(79,70,229,0.10);
-  }
-  .tool-card.selected {
-    border-color: #4f46e5;
-    background: #fafaff;
+    border-color: #8b5cf6;
+    box-shadow: 0 8px 24px rgba(139, 92, 246, 0.15);
+    transform: translateY(-2px);
   }
   .chip {
     display: inline-block;
-    background: #eef2ff;
+    background: rgba(238, 242, 255, 0.8);
     color: #4f46e5;
     font-size: 11px;
     font-weight: 600;
-    padding: 3px 10px;
+    padding: 4px 12px;
     border-radius: 20px;
-    margin-bottom: 6px;
+    margin-bottom: 8px;
     letter-spacing: 0.04em;
     text-transform: uppercase;
-  }
-  .user-pill {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    background: #f4f4fb;
-    border-radius: 40px;
-    padding: 6px 14px 6px 8px;
-    width: fit-content;
-    margin: 0 auto 1.5rem;
-    font-size: 13px;
-    color: #444;
-  }
-  .user-pill img {
-    width: 28px;
-    height: 28px;
-    border-radius: 50%;
-  }
-  .stButton > button {
-    border-radius: 10px !important;
-    font-family: 'DM Sans', sans-serif !important;
-    font-weight: 500 !important;
-  }
-  .stButton > button[kind="primary"] {
-    background: #4f46e5 !important;
-    border: none !important;
-  }
-  .stButton > button[kind="primary"]:hover {
-    background: #4338ca !important;
-  }
-  div[data-testid="stExpander"] {
-    border-radius: 10px;
-    border: 1px solid #e2e2ef;
-  }
-  .section-divider {
-    border: none;
-    border-top: 1px solid #eee;
-    margin: 1.5rem 0;
-  }
-  .footer {
-    text-align: center;
-    font-size: 11px;
-    color: #aaa;
-    margin-top: 3rem;
-    padding-bottom: 2rem;
+    backdrop-filter: blur(4px);
   }
 </style>
 """, unsafe_allow_html=True)
