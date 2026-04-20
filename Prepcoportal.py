@@ -312,7 +312,7 @@ def login_wall():
     # The Login Screen
     st.markdown("""
     <div class='hero'>
-      <h1>PrepCo</h1>
+      <h1>🎯 PrepCo</h1>
       <p>IIM Nagpur · Placement Preparation Portal</p>
     </div>
     """, unsafe_allow_html=True)
@@ -586,6 +586,7 @@ def tool_interview(user_row: dict):
 # ──────────────────────────────────────────────
 def tool_drive_documents():
     import streamlit.components.v1 as components
+    import re
     st.markdown("### 📁 Prep Documents")
     st.caption("Access shared preparation materials from Google Drive directly.")
     
@@ -593,8 +594,18 @@ def tool_drive_documents():
         st.warning("⚠️ The Drive Folder ID is not configured in the secrets yet. Please add `DRIVE_FOLDER_ID` to your `.streamlit/secrets.toml`.")
         return
         
+    # Extract ID just in case the user pasted a full URL
+    folder_id = DRIVE_FOLDER_ID.strip()
+    match = re.search(r'folders/([a-zA-Z0-9_-]+)', folder_id)
+    if match:
+        folder_id = match.group(1)
+    else:
+        match = re.search(r'id=([a-zA-Z0-9_-]+)', folder_id)
+        if match:
+            folder_id = match.group(1)
+            
     with st.spinner("Loading Drive folder..."):
-        drive_url = f"https://drive.google.com/embeddedfolderview?id={DRIVE_FOLDER_ID}#grid"
+        drive_url = f"https://drive.google.com/embeddedfolderview?id={folder_id}#grid"
         components.iframe(drive_url, width=None, height=600, scrolling=True)
 
 # ──────────────────────────────────────────────
