@@ -45,12 +45,12 @@ st.markdown("""
   /* Hero Section */
   .hero {
     text-align: center;
-    padding: 3rem 0 2rem;
+    padding: 0.5rem 0 0.5rem;
     animation: fadeInDown 0.8s ease-out;
   }
   .hero h1 {
-    font-size: 3.5rem;
-    margin-bottom: 0.5rem;
+    font-size: 2.2rem;
+    margin-bottom: 0.2rem;
     background: linear-gradient(135deg, #4f46e5, #d946ef);
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
@@ -58,9 +58,10 @@ st.markdown("""
   }
   .hero p {
     color: #64748b;
-    font-size: 1.1rem;
+    font-size: 0.95rem;
     font-weight: 500;
     letter-spacing: 0.02em;
+    margin-bottom: 0.5rem;
   }
 
   /* Quota Bar */
@@ -142,9 +143,9 @@ st.markdown("""
     border: 1px solid rgba(226, 232, 240, 0.8);
     backdrop-filter: blur(10px);
     border-radius: 40px;
-    padding: 8px 18px 8px 10px;
+    padding: 6px 14px 6px 8px;
     width: fit-content;
-    margin: 0 auto 2rem;
+    margin: 0 auto 0.75rem;
     font-size: 14px;
     font-weight: 500;
     color: #475569;
@@ -189,7 +190,7 @@ st.markdown("""
     border: none;
     height: 1px;
     background: linear-gradient(90deg, transparent, rgba(203, 213, 225, 0.8), transparent);
-    margin: 2.5rem 0;
+    margin: 1rem 0 1.5rem;
   }
 
   /* Footer */
@@ -708,7 +709,7 @@ def main():
     pct = max(0, min(runs_left / LIFETIME_RUN_LIMIT, 1.0))
     color = "#4f46e5" if pct > 0.4 else ("#f59e0b" if pct > 0.15 else "#ef4444")
     st.markdown(f"""
-    <div style="max-width:480px;margin:0 auto 1.5rem;text-align:center">
+    <div style="max-width:480px;margin:0 auto 0.5rem;text-align:center">
       <div style="font-size:12px;color:#888;margin-bottom:4px">
         Runs remaining: <strong>{runs_left}</strong> of {LIFETIME_RUN_LIMIT}
       </div>
