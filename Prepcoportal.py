@@ -31,6 +31,10 @@ st.markdown("""
   footer { visibility: hidden !important; }
 
   /* Base App Styling & Typography */
+  .block-container {
+    padding-top: 2rem !important;
+    padding-bottom: 2rem !important;
+  }
   html, body, [class*="css"] {
     font-family: 'Inter', sans-serif;
     color: #0f172a;
@@ -693,39 +697,41 @@ def main():
 
     runs_left = LIFETIME_RUN_LIMIT - user_row["runs"]
 
-    # ... [Keep your Header, User Pill, and Quota Bar code exactly the same] ...    # ── Header ────────────────────────────────
-    st.markdown("""
-    <div class='hero'>
-      <h1>🎯 PrepCo</h1>
-      <p>IIM Nagpur · Placement Preparation Portal</p>
-    </div>
-    """, unsafe_allow_html=True)
-
-    # User pill
-    pill_img = f'<img src="{picture}" />' if picture else ""
-    st.markdown(f"""
-    <div class='user-pill'>
-      {pill_img}
-      <span>{name} &nbsp;·&nbsp; {email}</span>
-    </div>
-    """, unsafe_allow_html=True)
-
-    # Quota bar
-    pct = max(0, min(runs_left / LIFETIME_RUN_LIMIT, 1.0))
-    color = "#4f46e5" if pct > 0.4 else ("#f59e0b" if pct > 0.15 else "#ef4444")
-    st.markdown(f"""
-    <div style="max-width:480px;margin:0 auto 0.5rem;text-align:center">
-      <div style="font-size:12px;color:#888;margin-bottom:4px">
-        Runs remaining: <strong>{runs_left}</strong> of {LIFETIME_RUN_LIMIT}
-      </div>
-      <div class="quota-bar-wrap">
-        <div class="quota-bar-fill" style="width:{pct*100:.0f}%;background:{color}"></div>
-      </div>
-    </div>
-    """, unsafe_allow_html=True)
+    # ── Compact Header ────────────────────────
+    col1, col2 = st.columns([3, 1])
+    with col1:
+        st.markdown("<h5 style='margin: 0; padding-top: 5px; color: #475569;'>IIM Nagpur · Placement Preparation Portal</h5>", unsafe_allow_html=True)
+    with col2:
+        st.markdown("<h3 style='margin: 0; text-align: right; background: linear-gradient(135deg, #4f46e5, #d946ef); -webkit-background-clip: text; -webkit-text-fill-color: transparent;'>🎯 PrepCo</h3>", unsafe_allow_html=True)
+        
+    st.markdown("<div style='height: 1px; background: linear-gradient(90deg, rgba(203, 213, 225, 0.8), transparent); margin: 0.5rem 0 1rem;'></div>", unsafe_allow_html=True)
 
     # ── Sidebar Navigation ────────────────────
     with st.sidebar:
+        pill_img = f'<img src="{picture}" style="width:32px;height:32px;border-radius:50%;border:2px solid white;box-shadow:0 2px 4px rgba(0,0,0,0.1);" />' if picture else ""
+        st.markdown(f"""
+        <div style="display:flex;align-items:center;gap:12px;margin-bottom:1.5rem;">
+          {pill_img}
+          <div style="line-height:1.2">
+            <div style="font-weight:600;font-size:15px;color:#0f172a;">{name}</div>
+            <div style="font-size:12px;color:#64748b;">{email}</div>
+          </div>
+        </div>
+        """, unsafe_allow_html=True)
+        
+        pct = max(0, min(runs_left / LIFETIME_RUN_LIMIT, 1.0))
+        color = "#4f46e5" if pct > 0.4 else ("#f59e0b" if pct > 0.15 else "#ef4444")
+        st.markdown(f"""
+        <div style="margin-bottom: 2rem;">
+          <div style="font-size:12px;color:#888;margin-bottom:4px">
+            Runs remaining: <strong>{runs_left}</strong> of {LIFETIME_RUN_LIMIT}
+          </div>
+          <div class="quota-bar-wrap" style="margin:0;">
+            <div class="quota-bar-fill" style="width:{pct*100:.0f}%;background:{color}"></div>
+          </div>
+        </div>
+        """, unsafe_allow_html=True)
+        
         st.markdown("### 🧰 Tools Menu")
         if st.button("📝 Resume Agent", use_container_width=True):
             st.session_state["tool"] = "resume"
@@ -742,8 +748,6 @@ def main():
             
         st.markdown("<br><br><br>", unsafe_allow_html=True)
         st.markdown("---")
-        st.markdown(f"**{name}**")
-        st.caption(email)
         
         if email.strip() in [a.strip() for a in ADMIN_EMAILS if a.strip()]:
             if st.button("🛡️ Admin Dashboard", use_container_width=True):
@@ -752,8 +756,6 @@ def main():
         if st.button("🚪 Logout", use_container_width=True):
             st.session_state.connected = False
             st.rerun()
-
-    st.markdown('<hr class="section-divider">', unsafe_allow_html=True)
 
     # ── Admin page ────────────────────────────
     if st.session_state.get("page") == "admin":
