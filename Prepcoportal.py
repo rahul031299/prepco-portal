@@ -252,6 +252,7 @@ GOOGLE_CLIENT_ID    = st.secrets.get("GOOGLE_CLIENT_ID", "")
 GOOGLE_CLIENT_SECRET = st.secrets.get("GOOGLE_CLIENT_SECRET", "")
 ADMIN_EMAILS        = st.secrets.get("ADMIN_EMAILS", "").split(",")
 DRIVE_FOLDER_ID     = st.secrets.get("DRIVE_FOLDER_ID", "")
+ATS_WEBSITE_URL     = st.secrets.get("ATS_WEBSITE_URL", "https://resumeframe.com/")
 
 # ──────────────────────────────────────────────
 # SUPABASE CLIENT
@@ -312,7 +313,7 @@ def login_wall():
     # The Login Screen
     st.markdown("""
     <div class='hero'>
-      <h1>PrepCo</h1>
+      <h1>🎯 PrepCo</h1>
       <p>IIM Nagpur · Placement Preparation Portal</p>
     </div>
     """, unsafe_allow_html=True)
@@ -609,6 +610,22 @@ def tool_drive_documents():
         components.iframe(drive_url, width=None, height=600, scrolling=True)
 
 # ──────────────────────────────────────────────
+# TOOL 4 — ATS SCORE CHECKER
+# ──────────────────────────────────────────────
+def tool_ats_checker():
+    st.markdown("### 🤖 ATS Score Checker")
+    st.caption("Check your resume against modern ATS screening tools.")
+    
+    st.info("To ensure your resume passes automated screening, use our recommended ATS checker tool below. This will open securely in a new tab.")
+    
+    st.markdown("<br>", unsafe_allow_html=True)
+    
+    col1, col2, col3 = st.columns([1, 2, 1])
+    with col2:
+        st.link_button("🚀 Launch ATS Checker", url=ATS_WEBSITE_URL, type="primary", use_container_width=True)
+        st.caption(f"<div style='text-align: center;'>Opens {ATS_WEBSITE_URL}</div>", unsafe_allow_html=True)
+
+# ──────────────────────────────────────────────
 # ADMIN DASHBOARD
 # ──────────────────────────────────────────────
 def admin_dashboard():
@@ -724,19 +741,21 @@ def main():
 
     # ── Tool selector ─────────────────────────
     st.markdown("#### Choose a tool")
-    col1, col2, col3 = st.columns(3)
+    col1, col2 = st.columns(2)
     with col1:
         if st.button("📝  Resume Agent\n\nTransform rough notes into IIMN-compliant CV bullets",
                      use_container_width=True):
             st.session_state["tool"] = "resume"
+        if st.button("📁  Prep Documents\n\nAccess shared preparation materials directly",
+                     use_container_width=True):
+            st.session_state["tool"] = "drive"
     with col2:
         if st.button("🎯  Interview Intel\n\nGenerate a 5-min company research dossier",
                      use_container_width=True):
             st.session_state["tool"] = "interview"
-    with col3:
-        if st.button("📁  Prep Documents\n\nAccess shared preparation materials directly",
+        if st.button("🤖  ATS Score Checker\n\nTest your resume against modern screening tools",
                      use_container_width=True):
-            st.session_state["tool"] = "drive"
+            st.session_state["tool"] = "ats"
 
     st.markdown('<hr class="section-divider">', unsafe_allow_html=True)
 
@@ -748,6 +767,8 @@ def main():
         tool_interview(user_row)
     elif tool == "drive":
         tool_drive_documents()
+    elif tool == "ats":
+        tool_ats_checker()
 
     # ── Footer ────────────────────────────────
     st.markdown('<div class="footer">PrepCo · IIM Nagpur Preparatory Committee · 2025–27 · Built with Streamlit</div>',
