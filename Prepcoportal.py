@@ -15,7 +15,7 @@ st.set_page_config(
     page_title="PrepCo · IIM Nagpur",
     page_icon="🎯",
     layout="centered",
-    initial_sidebar_state="collapsed",
+    initial_sidebar_state="expanded",
 )
 
 # ──────────────────────────────────────────────
@@ -200,6 +200,12 @@ st.markdown("""
     margin-top: 4rem;
     padding-bottom: 2rem;
     font-weight: 500;
+  }
+
+  /* Sidebar tweaks */
+  [data-testid="stSidebar"] {
+    background-color: rgba(255, 255, 255, 0.8);
+    backdrop-filter: blur(10px);
   }
 
   /* Animations */
@@ -712,24 +718,36 @@ def main():
     </div>
     """, unsafe_allow_html=True)
 
-    # ── Logout ────────────────────────────────
+    # ── Sidebar Navigation ────────────────────
     with st.sidebar:
+        st.markdown("### 🧰 Tools Menu")
+        if st.button("📝 Resume Agent", use_container_width=True):
+            st.session_state["tool"] = "resume"
+            st.session_state["page"] = "home"
+        if st.button("🎯 Interview Intel", use_container_width=True):
+            st.session_state["tool"] = "interview"
+            st.session_state["page"] = "home"
+        if st.button("📁 Prep Documents", use_container_width=True):
+            st.session_state["tool"] = "drive"
+            st.session_state["page"] = "home"
+        if st.button("🤖 ATS Score Checker", use_container_width=True):
+            st.session_state["tool"] = "ats"
+            st.session_state["page"] = "home"
+            
+        st.markdown("<br><br><br>", unsafe_allow_html=True)
+        st.markdown("---")
         st.markdown(f"**{name}**")
         st.caption(email)
-        st.markdown("---")
         
-        # New simple logout button
-        if st.button("🚪 Logout"):
+        if email.strip() in [a.strip() for a in ADMIN_EMAILS if a.strip()]:
+            if st.button("🛡️ Admin Dashboard", use_container_width=True):
+                st.session_state["page"] = "admin"
+                
+        if st.button("🚪 Logout", use_container_width=True):
             st.session_state.connected = False
             st.rerun()
-            
-        if email.strip() in [a.strip() for a in ADMIN_EMAILS if a.strip()]:
-            if st.button("🛡️ Admin Dashboard"):
-                st.session_state["page"] = "admin"
-        if st.button("🏠 Home"):
-            st.session_state["page"] = "home"
 
-    # ... [Keep the rest of your main() function exactly the same] ...
+    st.markdown('<hr class="section-divider">', unsafe_allow_html=True)
 
     # ── Admin page ────────────────────────────
     if st.session_state.get("page") == "admin":
@@ -738,26 +756,6 @@ def main():
         else:
             st.error("Access denied.")
         return
-
-    # ── Tool selector ─────────────────────────
-    st.markdown("#### Choose a tool")
-    col1, col2 = st.columns(2)
-    with col1:
-        if st.button("📝  Resume Agent\n\nTransform rough notes into IIMN-compliant CV bullets",
-                     use_container_width=True):
-            st.session_state["tool"] = "resume"
-        if st.button("📁  Prep Documents\n\nAccess shared preparation materials directly",
-                     use_container_width=True):
-            st.session_state["tool"] = "drive"
-    with col2:
-        if st.button("🎯  Interview Intel\n\nGenerate a 5-min company research dossier",
-                     use_container_width=True):
-            st.session_state["tool"] = "interview"
-        if st.button("🤖  ATS Score Checker\n\nTest your resume against modern screening tools",
-                     use_container_width=True):
-            st.session_state["tool"] = "ats"
-
-    st.markdown('<hr class="section-divider">', unsafe_allow_html=True)
 
     # ── Render selected tool ──────────────────
     tool = st.session_state.get("tool", "resume")
