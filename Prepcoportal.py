@@ -25,8 +25,10 @@ st.markdown("""
 <style>
   @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&family=Inter:wght@400;500;600&display=swap');
 
-  /* Hide Streamlit Default UI (GitHub icon, menu, footer) */
-  header { visibility: hidden !important; }
+  /* Hide Streamlit Default UI (GitHub icon, menu, footer) but keep sidebar toggle */
+  header[data-testid="stHeader"] { background: transparent !important; }
+  [data-testid="stHeaderActionElements"] { display: none !important; }
+  [data-testid="stToolbar"] { display: none !important; }
   #MainMenu { visibility: hidden !important; }
   footer { visibility: hidden !important; }
 
