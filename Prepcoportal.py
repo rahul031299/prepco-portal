@@ -28,6 +28,9 @@ st.markdown("""
   /* Completely hide the header to remove GitHub/Fork buttons */
   header { visibility: hidden !important; }
   
+  /* Make the sidebar open button visible so you can open it if it's stuck closed */
+  [data-testid="collapsedControl"] { visibility: visible !important; }
+
   /* Make the sidebar completely static (permanently open) by hiding the close button */
   [data-testid="stSidebarCollapseButton"] { display: none !important; }
   
