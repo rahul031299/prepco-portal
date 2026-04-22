@@ -445,81 +445,51 @@ def tool_resume(user_row: dict):
 
         with st.spinner("Optimising for IIMN guidelines..."):
             model, model_name = get_gemini_model()
-            prompt = f"""SYSTEM: IIM Nagpur Resume Bullet Point Optimizer
+            prompt = f"""Here is an upgraded, comprehensive version of your prompt. It directly integrates the specific STAR domain examples from the PrepCo guidelines and categorizes the power verbs to ensure the generated variations are highly targeted and impactful for the 700 students utilizing the optimization tool. 
 
-═══════════════════════════════════════════════════════════════════
-STRICT RULES (NON-NEGOTIABLE)
-═══════════════════════════════════════════════════════════════════
+You can copy and paste this directly into your system.
 
-1. LENGTH: Max 14 words OR 120 chars (whichever first) - VERIFY COUNTS
-2. START: Power verb (past tense unless ongoing role)
-3. INCLUDE: Quantified result (%, numbers, timeline, scale)
-4. BAN: worked on, helped, assisted, involved, participated, various
-5. TEST: "Can recruiter grasp impact in 5 seconds?"
+***
 
-FORMULA: [POWER VERB] + [scope/action] + [quantified result]
+### Improved Resume Optimization Prompt
 
-═══════════════════════════════════════════════════════════════════
-POWER VERBS BY DOMAIN (USE 3 DIFFERENT VERBS PER OUTPUT)
-═══════════════════════════════════════════════════════════════════
+```text
+ROLE: IIM Nagpur Resume Optimization Engine.
+TASK: Convert the input text into 3 high-impact resume bullet points tailored to specific domains.
 
-CONSULTING: Analyzed, Assessed, Benchmarked, Diagnosed, Evaluated, Formulated, Identified, Recommended, Streamlined, Synthesized, Strategized
+--- IIM NAGPUR PREPCO GUIDELINES (NON-NEGOTIABLE) ---
+1. [cite_start]LENGTH: Max 14 words OR 120 characters per point[cite: 452]. [Strict Constraint]
+2. [cite_start]SYNTAX: Begin each bullet point with a strong action verb[cite: 453]. [cite_start]Use Active voice[cite: 462]. [cite_start]Prefer past tense, unless it's an ongoing responsibility[cite: 463].
+3. [cite_start]STAR FRAMEWORK: Situation (Context) -> Task -> Action -> Result (Impact)[cite: 455, 471, 472, 474, 475].
+4. [cite_start]QUANTIFICATION: You MUST include quantifiable outcomes: numbers, %, timelines, growth metrics[cite: 454]. If missing, use placeholders like [X]%. 
+5. [cite_start]CLARITY: Each point must be crisp and result-oriented[cite: 462]. [cite_start]A recruiter should understand the impact in 5 seconds[cite: 464].
+6. [cite_start]FORBIDDEN WORDS: Do not write generic or vague points like ""worked on a project"" or ""helped the team""[cite: 456].
 
-FINANCE: Audited, Balanced, Budgeted, Calculated, Forecasted, Maximized, Projected, Quantified, Reconciled, Reduced, Tracked
+--- HIGH-IMPACT POWER VERBS TO UTILIZE ---
+* [cite_start]For Consulting/Strategy: Analyzed [cite: 262][cite_start], Formulated [cite: 279][cite_start], Recommended [cite: 270][cite_start], Streamlined [cite: 256][cite_start], Evaluated [cite: 11][cite_start], Diagnosed[cite: 264].
+* [cite_start]For Finance/Analytical: Reconciled [cite: 303][cite_start], Audited [cite: 315][cite_start], Appraised [cite: 313][cite_start], Calculated [cite: 318][cite_start], Forecasted [cite: 12][cite_start], Projected[cite: 287].
+* [cite_start]For General Mgmt/Ops: Automated [cite: 558][cite_start], Orchestrated [cite: 223][cite_start], Executed [cite: 80][cite_start], Supervised [cite: 130][cite_start], Spearheaded [cite: 157][cite_start], Accelerated[cite: 153].
 
-SALES: Closed, Converted, Delivered, Generated, Grew, Increased, Launched, Negotiated, Secured, Sold
+--- TRAINING EXAMPLES (FROM OFFICIAL GUIDE) ---
+* [cite_start]BAD: ""Worked on a project."" [cite: 456]
+* [cite_start]GOOD (Sales): ""Converted 30+ B2B leads via cold calls, achieving 20% monthly revenue growth""[cite: 484].
+* [cite_start]GOOD (Marketing): ""Boosted Meta Ads ROAS by 2.1x using A/B tested creatives and landing pages""[cite: 505].
+* [cite_start]GOOD (Consulting): ""Analysed 5 client portfolios, recommended 3 strategy shifts, boosting efficiency by 12%""[cite: 521].
+* [cite_start]GOOD (Finance): ""Reconciled financial data of 3 quarters, identifying errors worth ₹5L in reporting""[cite: 539].
+* [cite_start]GOOD (Operations): ""Automated purchase order flow, reducing manual effort by 8 hours/week using workflow tools""[cite: 558].
+* [cite_start]GOOD (HR): ""Built an HR dashboard for attrition tracking, reducing reporting time by 40%""[cite: 585].
+* [cite_start]GOOD (Gen Management): ""Led cross-functional team of 8 to execute CSR campaign impacting 500+ rural students""[cite: 594].
 
-MARKETING: Boosted, Created, Designed, Enhanced, Improved, Optimized, Promoted, Publicized, Refined, Revamped
+--- USER INPUT ---
+{user_text}
 
-OPERATIONS: Automated, Coordinated, Executed, Facilitated, Implemented, Organized, Processed, Scheduled, Streamlined, Systematized
-
-LEADERSHIP: Chaired, Coached, Directed, Led, Managed, Mentored, Orchestrated, Pioneered, Spearheaded, Supervised, Trained
-
-HR: Advised, Coached, Developed, Enabled, Enhanced, Facilitated, Guided, Implemented, Supported
-
-TECH: Built, Coded, Configured, Debugged, Developed, Engineered, Integrated, Migrated, Optimized, Programmed
-
-GENERAL: Accelerated, Achieved, Amplified, Drove, Exceeded, Expedited, Innovated, Transformed, Upgraded
-
-═══════════════════════════════════════════════════════════════════
-EXAMPLES (FROM OFFICIAL GUIDE)
-═══════════════════════════════════════════════════════════════════
-
-✓ "Converted 30+ B2B leads via cold calls, achieving 20% monthly revenue growth" [12w, 78c]
-✓ "Boosted Meta Ads ROAS by 2.1x using A/B tested creatives" [10w, 58c]
-✓ "Analyzed 5 portfolios, recommended 3 shifts, boosting efficiency by 12%" [10w, 73c]
-✓ "Reconciled 3 quarters data, identifying ₹5L errors in reporting" [9w, 64c]
-✓ "Automated PO flow, reducing manual effort by 8 hours/week" [9w, 59c]
-✓ "Led 8-person team executing CSR campaign impacting 500+ students" [9w, 66c]
-
-═══════════════════════════════════════════════════════════════════
-OUTPUT FORMAT
-═══════════════════════════════════════════════════════════════════
-
-Generate 3 variations with different angles:
-
-**VAR 1: ANALYTICAL** (Analyzed/Evaluated/Assessed/Identified)
-[bullet] ✓ Words: X | Chars: Y
-
-**VAR 2: QUANTITATIVE** (Increased/Reduced/Generated/Saved)
-[bullet] ✓ Words: X | Chars: Y
-
-**VAR 3: LEADERSHIP** (Led/Managed/Spearheaded/Coordinated)
-[bullet] ✓ Words: X | Chars: Y
-
-CHECKS: ✓ 3 unique verbs ✓ All quantified ✓ All under limits ✓ No banned words
-⚠️ Note placeholders if metrics missing
-
-═══════════════════════════════════════════════════════════════════
-
-COMPRESSION TACTICS IF OVER LIMIT:
-• Drop articles: the/a/an
-• Use abbreviations: ops, dept, mgmt
-• Numerals: 3 not three
-• Compact phrases: "by implementing" → "via"
-
-NOW READY FOR INPUT.
-
+--- OUTPUT INSTRUCTIONS ---
+Provide 3 variations based on the user input. [cite_start]Ensure EVERY point is strictly under 14 words OR 120 characters[cite: 452]. 
+ 
+1. **Consulting/Strategy Style** (Focus: Efficiency, Analysis, Recommendations. Use Problem-Solving Verbs).
+2. **Finance/Analytical Style** (Focus: Accuracy, Audit, Numbers, Budget. Use Quantitative Verbs).
+3. **General Mgmt/Ops Style** (Focus: Leadership, Execution, Timelines, Stakeholders. Use Leading & Getting Results Verbs).
+```
 """
             try:
                 response = model.generate_content(prompt)
