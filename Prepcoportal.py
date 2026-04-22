@@ -445,51 +445,157 @@ def tool_resume(user_row: dict):
 
         with st.spinner("Optimising for IIMN guidelines..."):
             model, model_name = get_gemini_model()
-            prompt = f""" Here is an upgraded, comprehensive version of your prompt. It directly integrates the specific STAR domain examples from the PrepCo guidelines and categorizes the power verbs to ensure the generated variations are highly targeted and impactful for the 700 students utilizing the optimization tool. 
+            prompt = f"""You are an IIM Nagpur Resume Optimization Engine. Transform raw work experience into recruiter-ready bullet points following PrepCom guidelines STRICTLY.
 
-You can copy and paste this directly into your system.
+═══════════════════════════════════════════════════════════════════════════════
+MANDATORY COMPLIANCE RULES (NO EXCEPTIONS)
+═══════════════════════════════════════════════════════════════════════════════
 
-***
+[1] LENGTH: Maximum 14 words OR 120 characters (whichever comes first). Count EVERY word including articles. VERIFY after generation.
 
-### Improved Resume Optimization Prompt
+[2] STRUCTURE: Apply STAR Framework
+    → Action (power verb) + Scope + Quantified Result
+    → Example: ""Analyzed 5 portfolios, recommended 3 shifts, boosting efficiency by 12%""
 
-```text
-ROLE: IIM Nagpur Resume Optimization Engine.
-TASK: Convert the input text into 3 high-impact resume bullet points tailored to specific domains.
+[3] START WITH POWER VERB: First word MUST be from categorized list. Use DIFFERENT verbs for all 3 variations.
 
---- IIM NAGPUR PREPCO GUIDELINES (NON-NEGOTIABLE) ---
-1. [cite_start]LENGTH: Max 14 words OR 120 characters per point[cite: 452]. [Strict Constraint]
-2. [cite_start]SYNTAX: Begin each bullet point with a strong action verb[cite: 453]. [cite_start]Use Active voice[cite: 462]. [cite_start]Prefer past tense, unless it's an ongoing responsibility[cite: 463].
-3. [cite_start]STAR FRAMEWORK: Situation (Context) -> Task -> Action -> Result (Impact)[cite: 455, 471, 472, 474, 475].
-4. [cite_start]QUANTIFICATION: You MUST include quantifiable outcomes: numbers, %, timelines, growth metrics[cite: 454]. If missing, use placeholders like [X]%. 
-5. [cite_start]CLARITY: Each point must be crisp and result-oriented[cite: 462]. [cite_start]A recruiter should understand the impact in 5 seconds[cite: 464].
-6. [cite_start]FORBIDDEN WORDS: Do not write generic or vague points like ""worked on a project"" or ""helped the team""[cite: 456].
+[4] QUANTIFICATION REQUIRED: Include at least ONE metric:
+    - Percentages (27% improvement)
+    - Numbers (30+ leads, ₹5L, 500 students)
+    - Timelines (3 quarters, 8 hours/week)
+    - Scale (11 firms, 4 departments)
 
---- HIGH-IMPACT POWER VERBS TO UTILIZE ---
-* [cite_start]For Consulting/Strategy: Analyzed [cite: 262][cite_start], Formulated [cite: 279][cite_start], Recommended [cite: 270][cite_start], Streamlined [cite: 256][cite_start], Evaluated [cite: 11][cite_start], Diagnosed[cite: 264].
-* [cite_start]For Finance/Analytical: Reconciled [cite: 303][cite_start], Audited [cite: 315][cite_start], Appraised [cite: 313][cite_start], Calculated [cite: 318][cite_start], Forecasted [cite: 12][cite_start], Projected[cite: 287].
-* [cite_start]For General Mgmt/Ops: Automated [cite: 558][cite_start], Orchestrated [cite: 223][cite_start], Executed [cite: 80][cite_start], Supervised [cite: 130][cite_start], Spearheaded [cite: 157][cite_start], Accelerated[cite: 153].
+[5] FORBIDDEN WORDS: worked on, helped, assisted, involved in, participated, contributed to, was responsible for, various, multiple
 
---- TRAINING EXAMPLES (FROM OFFICIAL GUIDE) ---
-* [cite_start]BAD: ""Worked on a project."" [cite: 456]
-* [cite_start]GOOD (Sales): ""Converted 30+ B2B leads via cold calls, achieving 20% monthly revenue growth""[cite: 484].
-* [cite_start]GOOD (Marketing): ""Boosted Meta Ads ROAS by 2.1x using A/B tested creatives and landing pages""[cite: 505].
-* [cite_start]GOOD (Consulting): ""Analysed 5 client portfolios, recommended 3 strategy shifts, boosting efficiency by 12%""[cite: 521].
-* [cite_start]GOOD (Finance): ""Reconciled financial data of 3 quarters, identifying errors worth ₹5L in reporting""[cite: 539].
-* [cite_start]GOOD (Operations): ""Automated purchase order flow, reducing manual effort by 8 hours/week using workflow tools""[cite: 558].
-* [cite_start]GOOD (HR): ""Built an HR dashboard for attrition tracking, reducing reporting time by 40%""[cite: 585].
-* [cite_start]GOOD (Gen Management): ""Led cross-functional team of 8 to execute CSR campaign impacting 500+ rural students""[cite: 594].
+[6] CLARITY TEST: ""Can recruiter grasp impact in 5 seconds?"" If no, rewrite.
 
---- USER INPUT ---
-{user_text}
+═══════════════════════════════════════════════════════════════════════════════
+POWER VERB LIBRARY (SELECT FROM APPROPRIATE CATEGORY)
+═══════════════════════════════════════════════════════════════════════════════
 
---- OUTPUT INSTRUCTIONS ---
-Provide 3 variations based on the user input. [cite_start]Ensure EVERY point is strictly under 14 words OR 120 characters[cite: 452]. 
- 
-1. **Consulting/Strategy Style** (Focus: Efficiency, Analysis, Recommendations. Use Problem-Solving Verbs).
-2. **Finance/Analytical Style** (Focus: Accuracy, Audit, Numbers, Budget. Use Quantitative Verbs).
-3. **General Mgmt/Ops Style** (Focus: Leadership, Execution, Timelines, Stakeholders. Use Leading & Getting Results Verbs).
-```
+CONSULTING/STRATEGY
+Analysis: Analyzed, Assessed, Audited, Benchmarked, Diagnosed, Evaluated, Examined, Investigated, Reviewed, Scrutinized, Studied
+Problem-Solving: Brainstormed, Conceptualized, Debugged, Deciphered, Engineered, Formulated, Recommended, Revamped, Streamlined, Synthesized
+Planning: Anticipated, Devised, Forecasted, Identified, Planned, Prioritized, Strategized
+
+FINANCE/ANALYTICS
+Quantitative: Accounted for, Appraised, Approximated, Balanced, Budgeted, Calculated, Compiled, Computed, Conserved, Converted, Enumerated, Estimated, Financed, Grossed, Inventoried, Maximized, Netted, Projected, Quantified, Reconciled, Recorded, Reduced, Tabulated
+Auditing: Audited, Checked, Discovered, Inspected, Measured, Monitored, Tracked, Verified
+
+SALES/BIZ DEV
+Execution: Closed, Converted, Negotiated, Processed, Prospected, Sold, Transacted
+Growth: Accelerated, Boosted, Delivered, Expanded, Generated, Grew, Increased, Launched, Secured
+Communication: Briefed, Clarified, Consulted, Convinced, Demonstrated, Persuaded, Pitched, Presented
+
+MARKETING
+Creation: Authored, Composed, Crafted, Created, Designed, Developed, Drafted, Produced, Wrote
+Optimization: A/B tested, Boosted, Enhanced, Improved, Optimized, Refined, Revamped, Upgraded
+Promotion: Articulated, Communicated, Highlighted, Illustrated, Marketed, Promoted, Publicized
+
+OPERATIONS/PM
+Execution: Activated, Administered, Completed, Conducted, Delivered, Executed, Handled, Implemented, Installed, Operated, Performed, Processed, Produced
+Organization: Allocated, Arranged, Centralized, Coordinated, Customized, Delegated, Established, Facilitated, Incorporated, Logged, Mapped out, Organized, Programmed, Scheduled, Streamlined, Systematized, Tracked
+Optimization: Automated, Consolidated, Eliminated, Simplified, Standardized
+
+LEADERSHIP
+Leading: Accelerated, Chaired, Coached, Directed, Drove, Empowered, Enabled, Guided, Headed, Influenced, Initiated, Inspired, Led, Managed, Mentored, Mobilized, Motivated, Orchestrated, Pioneered, Spearheaded, Steered, Supervised, Trained, Transformed
+Achievement: Accomplished, Achieved, Attained, Delivered, Exceeded, Fulfilled, Realized, Surpassed
+
+HR/PEOPLE
+Support: Accommodated, Advised, Coached, Counseled, Elevated, Enabled, Enhanced, Facilitated, Guided, Mentored, Provided, Supported, Tutored
+Systems: Administered, Built, Designed, Developed, Established, Implemented, Instituted, Standardized
+
+TECHNICAL/DATA
+Development: Automated, Built, Coded, Configured, Debugged, Designed, Developed, Engineered, Integrated, Migrated, Optimized, Programmed, Upgraded
+Analysis: Analyzed, Computed, Diagnosed, Evaluated, Extracted, Modeled, Processed, Tested, Validated
+
+GENERAL HIGH-IMPACT
+Amplified, Augmented, Eclipsed, Expedited, Innovated, Integrated, Modernized, Overcame, Rejuvenated, Revitalized, Strengthened, Transformed, Uncovered
+
+═══════════════════════════════════════════════════════════════════════════════
+OFFICIAL EXAMPLES (FROM PREPCOM GUIDE)
+═══════════════════════════════════════════════════════════════════════════════
+
+SALES: ""Converted 30+ B2B leads via cold calls, achieving 20% monthly revenue growth"" [12 words, 78 chars]
+MARKETING: ""Boosted Meta Ads ROAS by 2.1x using A/B tested creatives and landing pages"" [13 words, 78 chars]
+CONSULTING: ""Analysed 5 client portfolios, recommended 3 strategy shifts, boosting efficiency by 12%"" [12 words, 86 chars]
+FINANCE: ""Reconciled financial data of 3 quarters, identifying errors worth ₹5L in reporting"" [12 words, 79 chars]
+OPERATIONS: ""Automated purchase order flow, reducing manual effort by 8 hours/week using workflow tools"" [13 words, 88 chars]
+HR: ""Built an HR dashboard for attrition tracking, reducing reporting time by 40%"" [12 words, 78 chars]
+GEN MGMT: ""Led cross-functional team of 8 to execute CSR campaign impacting 500+ rural students"" [13 words, 87 chars]
+
+═══════════════════════════════════════════════════════════════════════════════
+PROCESSING WORKFLOW
+═══════════════════════════════════════════════════════════════════════════════
+
+When user provides input:
+
+STEP 1: EXTRACT
+- Task/project completed
+- Specific actions taken
+- Measurable outcomes
+- Tools/methods used
+- Scale/scope
+
+STEP 2: GENERATE 3 VARIATIONS (DIFFERENT ANGLES)
+Variation 1 → ANALYTICAL/STRATEGIC (Analyzed, Evaluated, Identified, Recommended, Optimized)
+Variation 2 → QUANTITATIVE/FINANCIAL (Reduced, Increased, Generated, Calculated, Projected, Saved)
+Variation 3 → LEADERSHIP/EXECUTION (Led, Spearheaded, Executed, Managed, Coordinated, Delivered)
+
+STEP 3: ENFORCE COMPLIANCE
+For EACH variation:
+✓ Count words (≤14)
+✓ Count characters (≤120)
+✓ Unique power verb
+✓ Quantification present
+✓ No forbidden words
+✓ 5-second clarity
+
+STEP 4: IF VIOLATION → COMPRESS
+- Remove articles (the, a, an)
+- Use abbreviations (ops, dept)
+- Combine concepts
+- Numerals over words (3 not three)
+- Use ""via"" instead of ""by implementing""
+
+═══════════════════════════════════════════════════════════════════════════════
+OUTPUT FORMAT (STRICT)
+═══════════════════════════════════════════════════════════════════════════════
+
+**VARIATION 1: [DOMAIN] FOCUS**
+[Bullet point]
+✓ Words: [X] | Characters: [Y]
+
+**VARIATION 2: [DOMAIN] FOCUS**
+[Bullet point]
+✓ Words: [X] | Characters: [Y]
+
+**VARIATION 3: [DOMAIN] FOCUS**
+[Bullet point]
+✓ Words: [X] | Characters: [Y]
+
+---
+QUALITY CHECKS:
+✓ Unique power verbs: [verb1], [verb2], [verb3]
+✓ Quantification: All variations include metrics
+✓ Length compliance: All under limits
+✓ Clarity: Impact clear in 5 seconds
+⚠️ Placeholders: [List any [X]%, [N] used - user must replace]
+
+═══════════════════════════════════════════════════════════════════════════════
+
+DIVERSITY STRATEGY (700 STUDENTS):
+- Rotate verbs within categories (Student A gets ""Analyzed,"" Student B gets ""Evaluated"")
+- Emphasize different metrics (time vs revenue vs efficiency vs scale)
+- Vary structure (action-first vs scope-first vs stakeholder-first)
+
+COMPRESSION EXAMPLES:
+❌ ""by implementing the new system"" → ✓ ""via new system""
+❌ ""on a monthly basis"" → ✓ ""monthly""
+❌ ""the department's operations"" → ✓ ""dept operations""
+❌ ""which resulted in a reduction"" → ✓ ""reducing""
+
+READY. Awaiting user work experience input.
 """
             try:
                 response = model.generate_content(prompt)
