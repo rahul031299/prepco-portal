@@ -28,18 +28,8 @@ st.markdown("""
   /* Completely hide the header to remove GitHub/Fork buttons */
   header { visibility: hidden !important; }
   
-  /* Rip out the sidebar toggle button and move it to the bottom left so it's still usable */
-  [data-testid="collapsedControl"] {
-    visibility: visible !important;
-    position: fixed !important;
-    top: auto !important;
-    bottom: 20px !important;
-    left: 20px !important;
-    z-index: 99999 !important;
-    background: white !important;
-    border-radius: 50% !important;
-    box-shadow: 0 4px 12px rgba(0,0,0,0.15) !important;
-  }
+  /* Make the sidebar completely static (permanently open) by hiding the close button */
+  [data-testid="stSidebarCollapseButton"] { display: none !important; }
   
   #MainMenu { visibility: hidden !important; }
   footer { visibility: hidden !important; }
