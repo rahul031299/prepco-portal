@@ -336,7 +336,7 @@ def login_wall():
     # The Login Screen
     st.markdown("""
     <div class='hero'>
-      <h1>🎯 PrepCo</h1>
+      <h1>PrepCo</h1>
       <p>IIM Nagpur · Placement Preparation Portal</p>
     </div>
     """, unsafe_allow_html=True)
@@ -510,7 +510,7 @@ Provide 3 variations based on the user input. [cite_start]Ensure EVERY point is 
 # TOOL 2 — INTERVIEW INTEL AGENT
 # ──────────────────────────────────────────────
 def tool_interview(user_row: dict):
-    st.markdown("### 🎯 Interview Intel Agent")
+    st.markdown("### Interview Intel Agent")
     st.caption("Generate a 5-minute research dossier for your upcoming interview.")
 
     col1, col2 = st.columns(2)
@@ -709,7 +709,7 @@ def main():
     with col1:
         st.markdown("<h5 style='margin: 0; padding-top: 5px; color: #475569;'>IIM Nagpur · Placement Preparation Portal</h5>", unsafe_allow_html=True)
     with col2:
-        st.markdown("<h3 style='margin: 0; text-align: right; background: linear-gradient(135deg, #4f46e5, #d946ef); -webkit-background-clip: text; -webkit-text-fill-color: transparent;'>🎯 PrepCo</h3>", unsafe_allow_html=True)
+        st.markdown("<h3 style='margin: 0; text-align: right; background: linear-gradient(135deg, #4f46e5, #d946ef); -webkit-background-clip: text; -webkit-text-fill-color: transparent;'>PrepCo</h3>", unsafe_allow_html=True)
         
     st.markdown("<div style='height: 1px; background: linear-gradient(90deg, rgba(203, 213, 225, 0.8), transparent); margin: 0.5rem 0 1rem;'></div>", unsafe_allow_html=True)
 
