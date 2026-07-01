@@ -558,6 +558,8 @@ STEP 4: IF VIOLATION → COMPRESS
 - Numerals over words (3 not three)
 - Use "via" instead of "by implementing"
 
+--- USER INPUT ---
+{user_text}
 ═══════════════════════════════════════════════════════════════════════════════
 OUTPUT FORMAT (STRICT)
 ═══════════════════════════════════════════════════════════════════════════════
