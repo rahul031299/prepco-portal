@@ -451,7 +451,7 @@ def tool_resume(user_row: dict):
 MANDATORY COMPLIANCE RULES (NO EXCEPTIONS)
 ═══════════════════════════════════════════════════════════════════════════════
 
-[1] LENGTH: Maximum 14 words OR 95 characters (whichever comes first). Count EVERY word including articles. VERIFY after generation.
+[1] LENGTH: Strictly 14 words OR 95 characters (whichever comes first). Count EVERY word including articles. VERIFY after generation.
 
 [2] STRUCTURE: Apply STAR Framework
     → Action (power verb) + Scope + Quantified Result
@@ -544,7 +544,7 @@ Variation 3 → LEADERSHIP/EXECUTION (Led, Spearheaded, Executed, Managed, Coord
 
 STEP 3: ENFORCE COMPLIANCE
 For EACH variation:
-✓ Count words (≤14)
+✓ Count words (=14)
 ✓ Count characters (=95)
 ✓ Unique power verb
 ✓ Quantification present
