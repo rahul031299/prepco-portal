@@ -564,24 +564,31 @@ STEP 4: IF VIOLATION → COMPRESS
 OUTPUT FORMAT (STRICT)
 ═══════════════════════════════════════════════════════════════════════════════
 
-**VARIATION 1: [DOMAIN] FOCUS**
+**[DOMAIN] FOCUS**:
 [Bullet point]
+
 ✓ Words: [X] | Characters: [Y]
 
-**VARIATION 2: [DOMAIN] FOCUS**
+**[DOMAIN] FOCUS**
 [Bullet point]
+
 ✓ Words: [X] | Characters: [Y]
 
-**VARIATION 3: [DOMAIN] FOCUS**
+**[DOMAIN] FOCUS**
 [Bullet point]
+
 ✓ Words: [X] | Characters: [Y]
 
 ---
 QUALITY CHECKS:
 ✓ Unique power verbs: [verb1], [verb2], [verb3]
+
 ✓ Quantification: All variations include metrics
+
 ✓ Length compliance: All under limits
+
 ✓ Clarity: Impact clear in 5 seconds
+
 ⚠️ Placeholders: [List any [X]%, [N] used - user must replace]
 
 ═══════════════════════════════════════════════════════════════════════════════
