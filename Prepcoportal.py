@@ -5,7 +5,6 @@ from bs4 import BeautifulSoup
 import json
 from datetime import datetime, timezone
 import os
-from streamlit_google_auth import Authenticate
 
 
 
@@ -273,13 +272,9 @@ st.markdown("""
 # ──────────────────────────────────────────────
 # CONFIG & SECRETS
 # ──────────────────────────────────────────────
-ALLOWED_DOMAIN      = st.secrets.get("ALLOWED_DOMAIN", "@iimn.ac.in")
 GEMINI_API_KEY      = st.secrets.get("GEMINI_API_KEY", "")
-GOOGLE_CLIENT_ID    = st.secrets.get("GOOGLE_CLIENT_ID", "")
-GOOGLE_CLIENT_SECRET = st.secrets.get("GOOGLE_CLIENT_SECRET", "")
 DRIVE_FOLDER_ID     = st.secrets.get("DRIVE_FOLDER_ID", "")
 ATS_WEBSITE_URL     = st.secrets.get("ATS_WEBSITE_URL", "https://resumeframe.com/")
-GOOGLE_REDIRECT_URI  = st.secrets.get("GOOGLE_REDIRECT_URI", "http://localhost:8501")
 
 
 # ──────────────────────────────────────────────
@@ -313,122 +308,23 @@ def set_stored_key(email: str, key: str):
     save_user_keys(all_keys)
 
 
-def get_ai_client(email: str):
-    """Retrieve active Gemini AI client based on sidebar selection."""
-    active_selection = st.session_state.get("active_ai_provider", "Default (System Gemini)")
+def get_ai_client(user_id: str):
+    """Retrieve Gemini client initialized with the user's personal API key."""
+    key = get_stored_key(user_id)
+    if not key:
+        st.error("Gemini API Key not found. Please enter and save your key under 'Configure Gemini Key' in the sidebar.")
+        st.stop()
+        
+    model_name = st.session_state.get("custom_model_gemini", "gemini-2.5-flash")
     
-    if active_selection == "Default (System Gemini)":
-        system_key = st.secrets.get("GEMINI_API_KEY", "").strip()
-        if not system_key:
-            st.error("System Gemini API Key is missing. Please select a custom key option and enter your Gemini API Key in the sidebar.")
-            st.stop()
-        model, model_name = get_gemini_model()
+    import google.generativeai as genai
+    genai.configure(api_key=key)
+    try:
+        model = genai.GenerativeModel(model_name)
         return model, model_name
-        
-    elif active_selection == "Custom Gemini Key":
-        key = get_stored_key(email)
-        if not key:
-            st.error("Custom Gemini API Key not found. Please add and save your key under 'Configure Gemini Key' in the sidebar.")
-            st.stop()
-        model_name = st.session_state.get("custom_model_gemini", "gemini-2.5-flash")
-        
-        import google.generativeai as genai
-        genai.configure(api_key=key)
-        try:
-            model = genai.GenerativeModel(model_name)
-            return model, model_name
-        except Exception as e:
-            st.error(f"Error initializing custom Gemini model '{model_name}': {e}")
-            st.stop()
-        
-    else:
-        st.error(f"Unknown active provider selection: {active_selection}")
+    except Exception as e:
+        st.error(f"Error initializing Gemini model '{model_name}': {e}")
         st.stop()
-
-def generate_credentials_json():
-    """Create google_credentials.json dynamically from secrets."""
-    creds = {
-        "web": {
-            "client_id": GOOGLE_CLIENT_ID,
-            "client_secret": GOOGLE_CLIENT_SECRET,
-            "auth_uri": "https://accounts.google.com/o/oauth2/auth",
-            "token_uri": "https://oauth2.googleapis.com/token",
-            "auth_provider_x509_cert_url": "https://www.googleapis.com/oauth2/v1/certs",
-            "redirect_uris": [GOOGLE_REDIRECT_URI]
-        }
-    }
-    with open("google_credentials.json", "w") as f:
-        json.dump(creds, f, indent=2)
-
-
-def login_wall():
-    """Perform Google OAuth login flow and return (email, name, picture)."""
-    if not GOOGLE_CLIENT_ID or not GOOGLE_CLIENT_SECRET:
-        st.error("🔒 Google OAuth is not configured. Please add `GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_SECRET` to your Streamlit secrets.")
-        st.stop()
-
-    # Generate credentials on the fly
-    generate_credentials_json()
-
-    # Configure the Authenticate client
-    authenticator = Authenticate(
-        secret_credentials_path='google_credentials.json',
-        cookie_name='prepco_oauth_session',
-        cookie_key='prepco_secure_cookie_key_iimn',
-        redirect_uri=GOOGLE_REDIRECT_URI
-    )
-
-    # Check OAuth verification redirection
-    authenticator.check_authentification()
-
-    # Check authentication state
-    if st.session_state.get('connected'):
-        user_info = st.session_state.get('user_info', {})
-        email = user_info.get('email', '').strip().lower()
-        name = user_info.get('name', 'Student')
-        picture = user_info.get('picture', '')
-
-        # Domain access check
-        allowed_domains = ["@iimn.ac.in", "@iimnagpur.ac.in"]
-        if not any(email.endswith(dom) for dom in allowed_domains):
-            st.error(f"⛔ Access Denied: '{email}' is not an approved IIM Nagpur Google account. Please log in with your official university account.")
-            if st.button("Try Another Account", use_container_width=True):
-                authenticator.logout()
-            st.stop()
-
-        # Inject session state variables for compatibility
-        st.session_state.connected = True
-        st.session_state.email = email
-        st.session_state.name = name
-        st.session_state.picture = picture
-        st.session_state.authenticator = authenticator
-        return email, name, picture
-
-    # Renders sign-in screen if not connected
-    st.markdown("""
-    <div style="text-align: center; padding: 2rem 0 1rem; animation: fadeInDown 0.8s ease-out;">
-        <div style="background: linear-gradient(135deg, #4f46e5, #d946ef); width: 60px; height: 60px; border-radius: 18px; display: flex; align-items: center; justify-content: center; color: white; font-size: 32px; box-shadow: 0 10px 25px rgba(79, 70, 229, 0.4); margin: 0 auto 1rem;">
-            🎯
-        </div>
-        <h1 style="font-family: 'Outfit', sans-serif; font-size: 2.8rem; font-weight: 800; background: linear-gradient(135deg, #4f46e5, #d946ef); -webkit-background-clip: text; -webkit-text-fill-color: transparent; letter-spacing: -0.03em; margin: 0 0 0.2rem 0; line-height: 1.1;">
-            PrepCo
-        </h1>
-        <p style="font-family: 'Inter', sans-serif; color: #64748b; font-size: 1rem; font-weight: 500; margin: 0 0 1.5rem 0;">
-            IIM Nagpur · Placement Preparation Portal
-        </p>
-    </div>
-    """, unsafe_allow_html=True)
-
-    col1, col2, col3 = st.columns([1, 2, 1])
-    with col2:
-        with st.container(border=True):
-            st.markdown("<p style='font-family: \"Inter\", sans-serif; font-size: 14px; font-weight: 500; color: #334155; margin-bottom: 16px; text-align: center;'>Sign in using your official @iimnagpur.ac.in account</p>", unsafe_allow_html=True)
-            
-            # Render the Google Sign-In button
-            authenticator.login()
-
-    st.markdown('<div class="footer">PrepCo · IIM Nagpur Preparatory Committee · 2025–27</div>', unsafe_allow_html=True)
-    st.stop()
 # ──────────────────────────────────────────────
 # GEMINI HELPER
 # ──────────────────────────────────────────────
@@ -806,9 +702,6 @@ def tool_ats_checker():
 # MAIN APP
 # ──────────────────────────────────────────────
 def main():
-    # ── Auth ──────────────────────────────────
-    email, name, picture = login_wall()
-
     # ── Compact Header ────────────────────────
     st.markdown("""
     <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.5rem; padding: 0.5rem 0;">
@@ -832,86 +725,98 @@ def main():
 
     # ── Sidebar Navigation ────────────────────
     with st.sidebar:
-        pill_img = f'<img src="{picture}" style="width:32px;height:32px;border-radius:50%;border:2px solid white;box-shadow:0 2px 4px rgba(0,0,0,0.1);" />' if picture else ""
-        st.markdown(f"""
-        <div style="display:flex;align-items:center;gap:12px;margin-bottom:1.5rem;">
-          {pill_img}
-          <div style="line-height:1.2">
-            <div style="font-weight:600;font-size:15px;color:#0f172a;">{name}</div>
-            <div style="font-size:12px;color:#64748b;">{email}</div>
-          </div>
-        </div>
-        """, unsafe_allow_html=True)
+        st.markdown("### 👤 User Identification")
+        user_id_input = st.text_input(
+            "Student ID / Name",
+            value=st.session_state.get("user_id", ""),
+            placeholder="e.g. p25rahul",
+            help="Enter a unique name or ID to save and load your custom API key."
+        ).strip().lower()
         
-        stored_gemini = get_stored_key(email)
+        st.session_state["user_id"] = user_id_input
 
-        # Dynamic Key Status Card
-        if stored_gemini:
-            model_name = st.session_state.get("custom_model_gemini", "gemini-2.5-flash")
-            st.markdown(f"""
-            <div style="background: rgba(34, 197, 94, 0.08); border: 1px solid rgba(34, 197, 94, 0.2); border-radius: 12px; padding: 12px; margin-bottom: 1.5rem;">
-                <div style="font-size: 12px; color: #15803d; font-weight: 600; display: flex; align-items: center; gap: 6px;">
-                    <span style="display:inline-block; width:8px; height:8px; background:#22c55e; border-radius:50%;"></span>
-                    Gemini Key Configured
-                </div>
-                <div style="font-size: 11px; color: #166534; margin-top: 4px;">
-                    Model: <code>{model_name}</code>
-                </div>
-            </div>
-            """, unsafe_allow_html=True)
-            # Inject session active provider selection
-            st.session_state["active_ai_provider"] = "Custom Gemini Key"
-        else:
+        if not user_id_input:
             st.markdown("""
             <div style="background: rgba(239, 68, 68, 0.08); border: 1px solid rgba(239, 68, 68, 0.2); border-radius: 12px; padding: 12px; margin-bottom: 1.5rem;">
                 <div style="font-size: 12px; color: #b91c1c; font-weight: 600; display: flex; align-items: center; gap: 6px;">
                     <span style="display:inline-block; width:8px; height:8px; background:#ef4444; border-radius:50%;"></span>
-                    Gemini Key Required
+                    Student ID Required
                 </div>
                 <div style="font-size: 11px; color: #991b1b; margin-top: 4px;">
-                    Please enter your key in the expander below to enable tools.
+                    Please enter a Student ID or Name to configure tools.
                 </div>
             </div>
             """, unsafe_allow_html=True)
-            # Default to System Gemini if no custom key is configured, but it will error upon tool click
-            st.session_state["active_ai_provider"] = "Default (System Gemini)"
+            stored_gemini = ""
+        else:
+            stored_gemini = get_stored_key(user_id_input)
 
-        # Custom Keys Management Expander
-        with st.expander("🔑 Configure Gemini Key", expanded=not bool(stored_gemini)):
-            st.markdown("<p style='font-size:11px;color:#64748b;margin:0 0 8px 0;'>Save your personal Gemini API key. It persists across sessions.</p>", unsafe_allow_html=True)
-            
-            input_key = st.text_input(
-                "Gemini API Key",
-                type="password",
-                value=stored_gemini,
-                placeholder="Enter Gemini API Key"
-            )
-            
-            custom_models = ["gemini-2.5-flash", "gemini-2.5-pro", "gemini-1.5-flash", "gemini-1.5-pro"]
-            state_key = "custom_model_gemini"
+            # Dynamic Key Status Card
+            if stored_gemini:
+                model_name = st.session_state.get("custom_model_gemini", "gemini-2.5-flash")
+                st.markdown(f"""
+                <div style="background: rgba(34, 197, 94, 0.08); border: 1px solid rgba(34, 197, 94, 0.2); border-radius: 12px; padding: 12px; margin-bottom: 1.5rem;">
+                    <div style="font-size: 12px; color: #15803d; font-weight: 600; display: flex; align-items: center; gap: 6px;">
+                        <span style="display:inline-block; width:8px; height:8px; background:#22c55e; border-radius:50%;"></span>
+                        Gemini Key Configured
+                    </div>
+                    <div style="font-size: 11px; color: #166534; margin-top: 4px;">
+                        Model: <code>{model_name}</code>
+                    </div>
+                </div>
+                """, unsafe_allow_html=True)
+                st.session_state["active_ai_provider"] = "Custom Gemini Key"
+            else:
+                st.markdown("""
+                <div style="background: rgba(239, 68, 68, 0.08); border: 1px solid rgba(239, 68, 68, 0.2); border-radius: 12px; padding: 12px; margin-bottom: 1.5rem;">
+                    <div style="font-size: 12px; color: #b91c1c; font-weight: 600; display: flex; align-items: center; gap: 6px;">
+                        <span style="display:inline-block; width:8px; height:8px; background:#ef4444; border-radius:50%;"></span>
+                        Gemini Key Required
+                    </div>
+                    <div style="font-size: 11px; color: #991b1b; margin-top: 4px;">
+                        Please enter your key in the expander below to enable tools.
+                    </div>
+                </div>
+                """, unsafe_allow_html=True)
+                st.session_state["active_ai_provider"] = "Default (System Gemini)"
+
+        if user_id_input:
+            # Custom Keys Management Expander
+            with st.expander("🔑 Configure Gemini Key", expanded=not bool(stored_gemini)):
+                st.markdown("<p style='font-size:11px;color:#64748b;margin:0 0 8px 0;'>Save your personal Gemini API key. It persists across sessions.</p>", unsafe_allow_html=True)
                 
-            current_model = st.session_state.get(state_key, custom_models[0])
-            if current_model not in custom_models:
-                current_model = custom_models[0]
+                input_key = st.text_input(
+                    "Gemini API Key",
+                    type="password",
+                    value=stored_gemini,
+                    placeholder="Enter Gemini API Key"
+                )
                 
-            selected_model = st.selectbox(
-                "Select Gemini Model",
-                custom_models,
-                index=custom_models.index(current_model)
-            )
-            st.session_state[state_key] = selected_model
-            
-            col_save, col_del = st.columns(2)
-            with col_save:
-                if st.button("Save Key", use_container_width=True):
-                    set_stored_key(email, input_key.strip())
-                    st.success("Saved!")
-                    st.rerun()
-            with col_del:
-                if st.button("Delete Key", use_container_width=True):
-                    set_stored_key(email, "")
-                    st.success("Deleted!")
-                    st.rerun()
+                custom_models = ["gemini-2.5-flash", "gemini-2.5-pro", "gemini-1.5-flash", "gemini-1.5-pro"]
+                state_key = "custom_model_gemini"
+                    
+                current_model = st.session_state.get(state_key, custom_models[0])
+                if current_model not in custom_models:
+                    current_model = custom_models[0]
+                    
+                selected_model = st.selectbox(
+                    "Select Gemini Model",
+                    custom_models,
+                    index=custom_models.index(current_model)
+                )
+                st.session_state[state_key] = selected_model
+                
+                col_save, col_del = st.columns(2)
+                with col_save:
+                    if st.button("Save Key", use_container_width=True):
+                        set_stored_key(user_id_input, input_key.strip())
+                        st.success("Saved!")
+                        st.rerun()
+                with col_del:
+                    if st.button("Delete Key", use_container_width=True):
+                        set_stored_key(user_id_input, "")
+                        st.success("Deleted!")
+                        st.rerun()
 
         st.markdown("### 🧰 Tools Menu")
         if st.button("📝 Resume Agent", use_container_width=True):
@@ -922,22 +827,17 @@ def main():
             st.session_state["tool"] = "drive"
         if st.button("🤖 ATS Score Checker", use_container_width=True):
             st.session_state["tool"] = "ats"
-            
-        st.markdown("<br><br><br>", unsafe_allow_html=True)
-        st.markdown("---")
-        
-        if st.button("🚪 Logout", use_container_width=True):
-            if "authenticator" in st.session_state:
-                st.session_state.authenticator.logout()
-            st.session_state.connected = False
-            st.rerun()
 
     # ── Render selected tool ──────────────────
+    if not user_id_input:
+        st.info("👈 Please identify yourself by entering a Student ID or Name in the sidebar to begin.")
+        return
+
     tool = st.session_state.get("tool", "resume")
     if tool == "resume":
-        tool_resume(email)
+        tool_resume(user_id_input)
     elif tool == "interview":
-        tool_interview(email)
+        tool_interview(user_id_input)
     elif tool == "drive":
         tool_drive_documents()
     elif tool == "ats":
