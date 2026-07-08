@@ -48,9 +48,15 @@ st.markdown("""
     color: #0f172a;
   }
   
-  /* Make the main app container have a subtle mesh-like gradient background */
+  /* Make the main app container have a premium mesh-like gradient background */
   .stApp {
-    background: radial-gradient(circle at top left, #f3e8ff 0%, #f8fafc 30%, #f8fafc 70%, #e0e7ff 100%);
+    background-color: #f8fafc;
+    background-image: 
+      radial-gradient(at 0% 0%, rgba(99, 102, 241, 0.12) 0px, transparent 50%),
+      radial-gradient(at 50% 0%, rgba(217, 70, 239, 0.08) 0px, transparent 50%),
+      radial-gradient(at 100% 0%, rgba(99, 102, 241, 0.12) 0px, transparent 50%),
+      radial-gradient(at 50% 100%, rgba(139, 92, 246, 0.08) 0px, transparent 50%);
+    background-attachment: fixed;
   }
 
   h1, h2, h3, h4, h5 {
@@ -300,191 +306,46 @@ def save_user_keys(keys_data: dict):
     except Exception:
         pass
 
-def get_stored_key(email: str, provider: str) -> str:
+def get_stored_key(email: str) -> str:
     all_keys = load_user_keys()
-    user_keys = all_keys.get(email, {})
-    return user_keys.get(provider, "")
+    return all_keys.get(email, "")
 
-def set_stored_key(email: str, provider: str, key: str):
+def set_stored_key(email: str, key: str):
     all_keys = load_user_keys()
-    if email not in all_keys:
-        all_keys[email] = {}
-    all_keys[email][provider] = key
+    all_keys[email] = key
     save_user_keys(all_keys)
 
 
-class ChatResponseWrapper:
-    def __init__(self, text: str):
-        self.text = text
-
-
-class AIProviderClient:
-    def __init__(self, provider: str, api_key: str, model_name: str):
-        self.provider = provider
-        self.api_key = api_key
-        self.model_name = model_name
-        self.history = []
-
-    def generate_content(self, prompt: str) -> str:
-        """Single-turn generation."""
-        if self.provider == "Gemini":
-            import google.generativeai as genai
-            genai.configure(api_key=self.api_key)
-            model = genai.GenerativeModel(self.model_name)
-            response = model.generate_content(prompt)
-            return response.text
-
-        elif self.provider == "OpenAI":
-            headers = {
-                "Authorization": f"Bearer {self.api_key}",
-                "Content-Type": "application/json"
-            }
-            payload = {
-                "model": self.model_name,
-                "messages": [{"role": "user", "content": prompt}]
-            }
-            res = requests.post("https://api.openai.com/v1/chat/completions", headers=headers, json=payload, timeout=30)
-            if res.status_code != 200:
-                try:
-                    err_msg = res.json()["error"]["message"]
-                except Exception:
-                    err_msg = res.text
-                raise Exception(f"OpenAI API Error: {err_msg}")
-            return res.json()["choices"][0]["message"]["content"]
-
-        elif self.provider == "Anthropic":
-            headers = {
-                "x-api-key": self.api_key,
-                "anthropic-version": "2023-06-01",
-                "content-type": "application/json"
-            }
-            payload = {
-                "model": self.model_name,
-                "max_tokens": 4000,
-                "messages": [{"role": "user", "content": prompt}]
-            }
-            res = requests.post("https://api.anthropic.com/v1/messages", headers=headers, json=payload, timeout=30)
-            if res.status_code != 200:
-                try:
-                    err_msg = res.json()["error"]["message"]
-                except Exception:
-                    err_msg = res.text
-                raise Exception(f"Anthropic API Error: {err_msg}")
-            return res.json()["content"][0]["text"]
-
-        else:
-            raise ValueError(f"Unknown provider: {self.provider}")
-
-    def start_chat(self, history=None):
-        self.history = []
-        return self
-
-    def send_message(self, message: str) -> ChatResponseWrapper:
-        """Send a message in a multi-turn chat session."""
-        if self.provider == "Gemini":
-            import google.generativeai as genai
-            genai.configure(api_key=self.api_key)
-            model = genai.GenerativeModel(self.model_name)
-            
-            gemini_history = []
-            for h in self.history:
-                role = "user" if h["role"] == "user" else "model"
-                gemini_history.append({"role": role, "parts": [h["content"]]})
-                
-            chat = model.start_chat(history=gemini_history)
-            response = chat.send_message(message)
-            
-            self.history.append({"role": "user", "content": message})
-            self.history.append({"role": "assistant", "content": response.text})
-            return ChatResponseWrapper(response.text)
-
-        elif self.provider == "OpenAI":
-            self.history.append({"role": "user", "content": message})
-            headers = {
-                "Authorization": f"Bearer {self.api_key}",
-                "Content-Type": "application/json"
-            }
-            payload = {
-                "model": self.model_name,
-                "messages": self.history
-            }
-            res = requests.post("https://api.openai.com/v1/chat/completions", headers=headers, json=payload, timeout=30)
-            if res.status_code != 200:
-                try:
-                    err_msg = res.json()["error"]["message"]
-                except Exception:
-                    err_msg = res.text
-                raise Exception(f"OpenAI API Error: {err_msg}")
-            reply = res.json()["choices"][0]["message"]["content"]
-            self.history.append({"role": "assistant", "content": reply})
-            return ChatResponseWrapper(reply)
-
-        elif self.provider == "Anthropic":
-            self.history.append({"role": "user", "content": message})
-            headers = {
-                "x-api-key": self.api_key,
-                "anthropic-version": "2023-06-01",
-                "content-type": "application/json"
-            }
-            payload = {
-                "model": self.model_name,
-                "max_tokens": 4000,
-                "messages": self.history
-            }
-            res = requests.post("https://api.anthropic.com/v1/messages", headers=headers, json=payload, timeout=30)
-            if res.status_code != 200:
-                try:
-                    err_msg = res.json()["error"]["message"]
-                except Exception:
-                    err_msg = res.text
-                raise Exception(f"Anthropic API Error: {err_msg}")
-            reply = res.json()["content"][0]["text"]
-            self.history.append({"role": "assistant", "content": reply})
-            return ChatResponseWrapper(reply)
-
-        else:
-            raise ValueError(f"Unknown provider: {self.provider}")
-
-
 def get_ai_client(email: str):
-    """Retrieve active AI client based on sidebar selection."""
+    """Retrieve active Gemini AI client based on sidebar selection."""
     active_selection = st.session_state.get("active_ai_provider", "Default (System Gemini)")
     
     if active_selection == "Default (System Gemini)":
         system_key = st.secrets.get("GEMINI_API_KEY", "").strip()
         if not system_key:
-            st.error("System Gemini API Key is missing. Please select a custom provider and configure your API key.")
+            st.error("System Gemini API Key is missing. Please select a custom key option and enter your Gemini API Key in the sidebar.")
             st.stop()
-        # Find best system model name
-        _, system_model_name = get_gemini_model()
-        return AIProviderClient("Gemini", system_key, system_model_name), system_model_name
+        model, model_name = get_gemini_model()
+        return model, model_name
         
-    elif active_selection == "Custom Gemini":
-        key = get_stored_key(email, "Gemini")
+    elif active_selection == "Custom Gemini Key":
+        key = get_stored_key(email)
         if not key:
-            st.error("Custom Gemini API Key not found. Please add and save your key under 'Manage Custom Keys' in the sidebar.")
+            st.error("Custom Gemini API Key not found. Please add and save your key under 'Configure Gemini Key' in the sidebar.")
             st.stop()
         model_name = st.session_state.get("custom_model_gemini", "gemini-2.5-flash")
-        return AIProviderClient("Gemini", key, model_name), model_name
         
-    elif active_selection == "Custom OpenAI":
-        key = get_stored_key(email, "OpenAI")
-        if not key:
-            st.error("Custom OpenAI API Key not found. Please add and save your key under 'Manage Custom Keys' in the sidebar.")
+        import google.generativeai as genai
+        genai.configure(api_key=key)
+        try:
+            model = genai.GenerativeModel(model_name)
+            return model, model_name
+        except Exception as e:
+            st.error(f"Error initializing custom Gemini model '{model_name}': {e}")
             st.stop()
-        model_name = st.session_state.get("custom_model_openai", "gpt-4o-mini")
-        return AIProviderClient("OpenAI", key, model_name), model_name
-        
-    elif active_selection == "Custom Anthropic":
-        key = get_stored_key(email, "Anthropic")
-        if not key:
-            st.error("Custom Anthropic API Key not found. Please add and save your key under 'Manage Custom Keys' in the sidebar.")
-            st.stop()
-        model_name = st.session_state.get("custom_model_anthropic", "claude-3-5-haiku-latest")
-        return AIProviderClient("Anthropic", key, model_name), model_name
         
     else:
-        st.error(f"Unknown active provider: {active_selection}")
+        st.error(f"Unknown active provider selection: {active_selection}")
         st.stop()
 
 # ──────────────────────────────────────────────
@@ -545,38 +406,47 @@ def login_wall():
 
     # The Login Screen
     st.markdown("""
-    <div class='hero'>
-      <h1>🎯 PrepCo</h1>
-      <p>IIM Nagpur · Placement Preparation Portal</p>
+    <div style="text-align: center; padding: 2rem 0 1rem; animation: fadeInDown 0.8s ease-out;">
+        <div style="background: linear-gradient(135deg, #4f46e5, #d946ef); width: 60px; height: 60px; border-radius: 18px; display: flex; align-items: center; justify-content: center; color: white; font-size: 32px; box-shadow: 0 10px 25px rgba(79, 70, 229, 0.4); margin: 0 auto 1rem;">
+            🎯
+        </div>
+        <h1 style="font-family: 'Outfit', sans-serif; font-size: 2.8rem; font-weight: 800; background: linear-gradient(135deg, #4f46e5, #d946ef); -webkit-background-clip: text; -webkit-text-fill-color: transparent; letter-spacing: -0.03em; margin: 0 0 0.2rem 0; line-height: 1.1;">
+            PrepCo
+        </h1>
+        <p style="font-family: 'Inter', sans-serif; color: #64748b; font-size: 1rem; font-weight: 500; margin: 0;">
+            IIM Nagpur · Placement Preparation Portal
+        </p>
     </div>
     """, unsafe_allow_html=True)
     
     col1, col2, col3 = st.columns([1, 2, 1])
     with col2:
-        st.info("Enter your approved IIMN email address to access the portal.")
-        email_input = st.text_input("Email Address", placeholder="name@iimn.ac.in")
-        
-        if st.button("Access Portal", type="primary", use_container_width=True):
-            if not email_input:
-                st.warning("Please enter your email.")
-                st.stop()
-                
-            email_clean = email_input.strip().lower()
+        with st.container(border=True):
+            st.markdown("<p style='font-family: \"Inter\", sans-serif; font-size: 14px; font-weight: 500; color: #334155; margin-bottom: 12px;'>Enter your approved email address to access the portal.</p>", unsafe_allow_html=True)
+            email_input = st.text_input("Email Address", placeholder="name@iimn.ac.in", label_visibility="collapsed")
             
-            # Check the Supabase database
-            with st.spinner("Verifying access..."):
-                user_row = check_whitelist_and_get_user(email_clean)
+            st.markdown("<div style='height: 8px;'></div>", unsafe_allow_html=True)
+            if st.button("Access Portal", type="primary", use_container_width=True):
+                if not email_input:
+                    st.warning("Please enter your email.")
+                    st.stop()
+                    
+                email_clean = email_input.strip().lower()
                 
-            if user_row:
-                # Login Success
-                st.session_state.connected = True
-                st.session_state.email = user_row["email"]
-                st.session_state.name = user_row["name"]
-                st.rerun()
-            else:
-                # Login Failed
-                st.error(f"⛔ Access Denied: '{email_clean}' is not on the approved list. Contact the Preparatory Committee.")
-                st.stop()
+                # Check the Supabase database
+                with st.spinner("Verifying access..."):
+                    user_row = check_whitelist_and_get_user(email_clean)
+                    
+                if user_row:
+                    # Login Success
+                    st.session_state.connected = True
+                    st.session_state.email = user_row["email"]
+                    st.session_state.name = user_row["name"]
+                    st.rerun()
+                else:
+                    # Login Failed
+                    st.error(f"⛔ Access Denied: '{email_clean}' is not on the approved list. Contact the Preparatory Committee.")
+                    st.stop()
 
     st.markdown('<div class="footer">PrepCo · IIM Nagpur Preparatory Committee · 2024–25</div>', unsafe_allow_html=True)
     st.stop()
@@ -902,7 +772,8 @@ def tool_interview(user_row: dict):
                   * *Why this works:* [Brief rationale]
 """
             try:
-                response_text = client.generate_content(prompt)
+                response = client.generate_content(prompt)
+                response_text = response.text
                 runs = increment_runs(user_row["email"])
                 user_row["runs"] = runs
 
@@ -1017,12 +888,24 @@ def main():
     runs_left = LIFETIME_RUN_LIMIT - user_row["runs"]
 
     # ── Compact Header ────────────────────────
-    col1, col2 = st.columns([3, 1])
-    with col1:
-        st.markdown("<h5 style='margin: 0; padding-top: 5px; color: #475569;'>IIM Nagpur · Placement Preparation Portal</h5>", unsafe_allow_html=True)
-    with col2:
-        st.markdown("<h3 style='margin: 0; text-align: right; background: linear-gradient(135deg, #4f46e5, #d946ef); -webkit-background-clip: text; -webkit-text-fill-color: transparent;'>🎯 PrepCo</h3>", unsafe_allow_html=True)
-        
+    st.markdown("""
+    <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.5rem; padding: 0.5rem 0;">
+        <div style="display: flex; align-items: center; gap: 10px;">
+            <div style="background: linear-gradient(135deg, #4f46e5, #d946ef); width: 36px; height: 36px; border-radius: 10px; display: flex; align-items: center; justify-content: center; color: white; font-weight: bold; font-size: 18px; box-shadow: 0 4px 10px rgba(79, 70, 229, 0.3);">
+                🎯
+            </div>
+            <div>
+                <div style="font-family: 'Outfit', sans-serif; font-size: 22px; font-weight: 800; background: linear-gradient(135deg, #4f46e5, #d946ef); -webkit-background-clip: text; -webkit-text-fill-color: transparent; letter-spacing: -0.02em; line-height: 1.1;">
+                    PrepCo
+                </div>
+                <div style="font-family: 'Inter', sans-serif; font-size: 11px; font-weight: 500; color: #64748b;">
+                    IIM Nagpur Placement Portal
+                </div>
+            </div>
+        </div>
+    </div>
+    """, unsafe_allow_html=True)
+    
     st.markdown("<div style='height: 1px; background: linear-gradient(90deg, rgba(203, 213, 225, 0.8), transparent); margin: 0.5rem 0 1rem;'></div>", unsafe_allow_html=True)
 
     # ── Sidebar Navigation ────────────────────
@@ -1038,30 +921,20 @@ def main():
         </div>
         """, unsafe_allow_html=True)
         
-        stored_gemini = get_stored_key(email, "Gemini")
-        stored_openai = get_stored_key(email, "OpenAI")
-        stored_anthropic = get_stored_key(email, "Anthropic")
+        stored_gemini = get_stored_key(email)
 
         # Active AI Provider Dropdown
         st.markdown("### 🤖 Active AI Provider")
         
         provider_options = [
             "Default (System Gemini)",
-            "Custom Gemini",
-            "Custom OpenAI",
-            "Custom Anthropic"
+            "Custom Gemini Key"
         ]
         
-        provider_labels = []
-        for opt in provider_options:
-            if opt == "Default (System Gemini)":
-                provider_labels.append(opt)
-            elif opt == "Custom Gemini":
-                provider_labels.append(opt + (" (Stored)" if stored_gemini else " (No Key)"))
-            elif opt == "Custom OpenAI":
-                provider_labels.append(opt + (" (Stored)" if stored_openai else " (No Key)"))
-            elif opt == "Custom Anthropic":
-                provider_labels.append(opt + (" (Stored)" if stored_anthropic else " (No Key)"))
+        provider_labels = [
+            "Default (System Gemini)",
+            f"Custom Gemini Key ({'Stored' if stored_gemini else 'No Key'})"
+        ]
                 
         current_selection = st.session_state.get("active_ai_provider", "Default (System Gemini)")
         if current_selection not in provider_options:
@@ -1084,7 +957,7 @@ def main():
             st.markdown(f"""
             <div style="margin-bottom: 2rem;">
               <div style="font-size:12px;color:#22c55e;margin-bottom:4px;font-weight:600;">
-                🟢 Custom Key Active ({active_provider.replace("Custom ", "")})
+                🟢 Custom Key Active (Gemini)
               </div>
               <div style="font-size:11px;color:#64748b;">
                 System run limits bypassed. Tokens billed to your account.
@@ -1106,39 +979,25 @@ def main():
             """, unsafe_allow_html=True)
 
         # Custom Keys Management Expander
-        with st.expander("🔑 Manage Custom Keys", expanded=False):
-            st.markdown("<p style='font-size:11px;color:#64748b;margin:0 0 8px 0;'>Save API keys securely for each platform. They persist across session reloads.</p>", unsafe_allow_html=True)
+        with st.expander("🔑 Configure Gemini Key", expanded=False):
+            st.markdown("<p style='font-size:11px;color:#64748b;margin:0 0 8px 0;'>Save your personal Gemini API key. It persists across sessions.</p>", unsafe_allow_html=True)
             
-            key_provider = st.selectbox(
-                "Select LLM Platform",
-                ["Gemini", "OpenAI", "Anthropic"],
-                key="manage_key_provider"
-            )
-            
-            current_key = get_stored_key(email, key_provider)
             input_key = st.text_input(
-                f"{key_provider} API Key",
+                "Gemini API Key",
                 type="password",
-                value=current_key,
-                placeholder=f"Enter {key_provider} Key"
+                value=stored_gemini,
+                placeholder="Enter Gemini API Key"
             )
             
-            if key_provider == "Gemini":
-                custom_models = ["gemini-2.5-flash", "gemini-2.5-pro", "gemini-1.5-flash", "gemini-1.5-pro"]
-                state_key = "custom_model_gemini"
-            elif key_provider == "OpenAI":
-                custom_models = ["gpt-4o-mini", "gpt-4o", "gpt-3.5-turbo"]
-                state_key = "custom_model_openai"
-            else:
-                custom_models = ["claude-3-5-haiku-latest", "claude-3-5-sonnet-latest"]
-                state_key = "custom_model_anthropic"
+            custom_models = ["gemini-2.5-flash", "gemini-2.5-pro", "gemini-1.5-flash", "gemini-1.5-pro"]
+            state_key = "custom_model_gemini"
                 
             current_model = st.session_state.get(state_key, custom_models[0])
             if current_model not in custom_models:
                 current_model = custom_models[0]
                 
             selected_model = st.selectbox(
-                f"Select {key_provider} Model",
+                "Select Gemini Model",
                 custom_models,
                 index=custom_models.index(current_model)
             )
@@ -1147,12 +1006,12 @@ def main():
             col_save, col_del = st.columns(2)
             with col_save:
                 if st.button("Save Key", use_container_width=True):
-                    set_stored_key(email, key_provider, input_key.strip())
+                    set_stored_key(email, input_key.strip())
                     st.success("Saved!")
                     st.rerun()
             with col_del:
                 if st.button("Delete Key", use_container_width=True):
-                    set_stored_key(email, key_provider, "")
+                    set_stored_key(email, "")
                     st.success("Deleted!")
                     st.rerun()
 
