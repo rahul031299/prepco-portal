@@ -2,10 +2,10 @@ import streamlit as st
 import google.generativeai as genai
 import requests
 from bs4 import BeautifulSoup
-from supabase import create_client, Client
 import json
 from datetime import datetime, timezone
 import os
+from streamlit_google_auth import Authenticate
 
 
 
@@ -274,15 +274,12 @@ st.markdown("""
 # CONFIG & SECRETS
 # ──────────────────────────────────────────────
 ALLOWED_DOMAIN      = st.secrets.get("ALLOWED_DOMAIN", "@iimn.ac.in")
-LIFETIME_RUN_LIMIT  = int(st.secrets.get("LIFETIME_RUN_LIMIT", 25))
 GEMINI_API_KEY      = st.secrets.get("GEMINI_API_KEY", "")
-SUPABASE_URL        = st.secrets.get("SUPABASE_URL", "")
-SUPABASE_KEY        = st.secrets.get("SUPABASE_KEY", "")
 GOOGLE_CLIENT_ID    = st.secrets.get("GOOGLE_CLIENT_ID", "")
 GOOGLE_CLIENT_SECRET = st.secrets.get("GOOGLE_CLIENT_SECRET", "")
-ADMIN_EMAILS        = st.secrets.get("ADMIN_EMAILS", "").split(",")
 DRIVE_FOLDER_ID     = st.secrets.get("DRIVE_FOLDER_ID", "")
 ATS_WEBSITE_URL     = st.secrets.get("ATS_WEBSITE_URL", "https://resumeframe.com/")
+GOOGLE_REDIRECT_URI  = st.secrets.get("GOOGLE_REDIRECT_URI", "http://localhost:8501")
 
 
 # ──────────────────────────────────────────────
@@ -348,63 +345,66 @@ def get_ai_client(email: str):
         st.error(f"Unknown active provider selection: {active_selection}")
         st.stop()
 
-# ──────────────────────────────────────────────
-# SUPABASE CLIENT
-# ──────────────────────────────────────────────
-@st.cache_resource
-def get_supabase() -> Client:
-    return create_client(SUPABASE_URL, SUPABASE_KEY)
+def generate_credentials_json():
+    """Create google_credentials.json dynamically from secrets."""
+    creds = {
+        "web": {
+            "client_id": GOOGLE_CLIENT_ID,
+            "client_secret": GOOGLE_CLIENT_SECRET,
+            "auth_uri": "https://accounts.google.com/o/oauth2/auth",
+            "token_uri": "https://oauth2.googleapis.com/token",
+            "auth_provider_x509_cert_url": "https://www.googleapis.com/oauth2/v1/certs",
+            "redirect_uris": [GOOGLE_REDIRECT_URI]
+        }
+    }
+    with open("google_credentials.json", "w") as f:
+        json.dump(creds, f, indent=2)
 
-
-def check_whitelist_and_get_user(email: str) -> dict:
-    """Check if user exists in Supabase. If yes, let them in. If no, block them."""
-    sb = get_supabase()
-    res = sb.table("usage").select("*").eq("email", email).execute()
-    
-    if res.data:
-        return res.data[0] # User found in backend!
-    else:
-        return None # User not found, block them.
-
-
-def get_or_create_user(email: str, name: str) -> dict:
-    """Return usage row for this user, creating it if absent."""
-    sb = get_supabase()
-    res = sb.table("usage").select("*").eq("email", email).execute()
-    if res.data:
-        return res.data[0]
-    new_row = {"email": email, "name": name, "runs": 0, "created_at": datetime.now(timezone.utc).isoformat()}
-    sb.table("usage").insert(new_row).execute()
-    return {**new_row, "runs": 0}
-
-
-def increment_runs(email: str) -> int:
-    """Increment run count and return new total."""
-    sb = get_supabase()
-    res = sb.table("usage").select("runs").eq("email", email).execute()
-    current = res.data[0]["runs"] if res.data else 0
-    new_val = current + 1
-    sb.table("usage").update({"runs": new_val, "last_run": datetime.now(timezone.utc).isoformat()}).eq("email", email).execute()
-    return new_val
-
-
-def get_all_usage() -> list:
-    """Get all user records for admin dashboard."""
-    sb = get_supabase()
-    res = sb.table("usage").select("*").order("runs", desc=True).execute()
-    return res.data or []
 
 def login_wall():
-    """Show a simple email login UI and return (email, name, picture)."""
-    # Initialize session state for login
-    if "connected" not in st.session_state:
-        st.session_state.connected = False
+    """Perform Google OAuth login flow and return (email, name, picture)."""
+    if not GOOGLE_CLIENT_ID or not GOOGLE_CLIENT_SECRET:
+        st.error("🔒 Google OAuth is not configured. Please add `GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_SECRET` to your Streamlit secrets.")
+        st.stop()
 
-    # If already logged in, bypass the wall
-    if st.session_state.connected:
-        return st.session_state.email, st.session_state.name, ""
+    # Generate credentials on the fly
+    generate_credentials_json()
 
-    # The Login Screen
+    # Configure the Authenticate client
+    authenticator = Authenticate(
+        secret_credentials_path='google_credentials.json',
+        cookie_name='prepco_oauth_session',
+        cookie_key='prepco_secure_cookie_key_iimn',
+        redirect_uri=GOOGLE_REDIRECT_URI
+    )
+
+    # Check OAuth verification redirection
+    authenticator.check_authentification()
+
+    # Check authentication state
+    if st.session_state.get('connected'):
+        user_info = st.session_state.get('user_info', {})
+        email = user_info.get('email', '').strip().lower()
+        name = user_info.get('name', 'Student')
+        picture = user_info.get('picture', '')
+
+        # Domain access check
+        allowed_domains = ["@iimn.ac.in", "@iimnagpur.ac.in"]
+        if not any(email.endswith(dom) for dom in allowed_domains):
+            st.error(f"⛔ Access Denied: '{email}' is not an approved IIM Nagpur Google account. Please log in with your official university account.")
+            if st.button("Try Another Account", use_container_width=True):
+                authenticator.logout()
+            st.stop()
+
+        # Inject session state variables for compatibility
+        st.session_state.connected = True
+        st.session_state.email = email
+        st.session_state.name = name
+        st.session_state.picture = picture
+        st.session_state.authenticator = authenticator
+        return email, name, picture
+
+    # Renders sign-in screen if not connected
     st.markdown("""
     <div style="text-align: center; padding: 2rem 0 1rem; animation: fadeInDown 0.8s ease-out;">
         <div style="background: linear-gradient(135deg, #4f46e5, #d946ef); width: 60px; height: 60px; border-radius: 18px; display: flex; align-items: center; justify-content: center; color: white; font-size: 32px; box-shadow: 0 10px 25px rgba(79, 70, 229, 0.4); margin: 0 auto 1rem;">
@@ -413,42 +413,21 @@ def login_wall():
         <h1 style="font-family: 'Outfit', sans-serif; font-size: 2.8rem; font-weight: 800; background: linear-gradient(135deg, #4f46e5, #d946ef); -webkit-background-clip: text; -webkit-text-fill-color: transparent; letter-spacing: -0.03em; margin: 0 0 0.2rem 0; line-height: 1.1;">
             PrepCo
         </h1>
-        <p style="font-family: 'Inter', sans-serif; color: #64748b; font-size: 1rem; font-weight: 500; margin: 0;">
+        <p style="font-family: 'Inter', sans-serif; color: #64748b; font-size: 1rem; font-weight: 500; margin: 0 0 1.5rem 0;">
             IIM Nagpur · Placement Preparation Portal
         </p>
     </div>
     """, unsafe_allow_html=True)
-    
+
     col1, col2, col3 = st.columns([1, 2, 1])
     with col2:
         with st.container(border=True):
-            st.markdown("<p style='font-family: \"Inter\", sans-serif; font-size: 14px; font-weight: 500; color: #334155; margin-bottom: 12px;'>Enter your approved email address to access the portal.</p>", unsafe_allow_html=True)
-            email_input = st.text_input("Email Address", placeholder="name@iimn.ac.in", label_visibility="collapsed")
+            st.markdown("<p style='font-family: \"Inter\", sans-serif; font-size: 14px; font-weight: 500; color: #334155; margin-bottom: 16px; text-align: center;'>Sign in using your official @iimnagpur.ac.in account</p>", unsafe_allow_html=True)
             
-            st.markdown("<div style='height: 8px;'></div>", unsafe_allow_html=True)
-            if st.button("Access Portal", type="primary", use_container_width=True):
-                if not email_input:
-                    st.warning("Please enter your email.")
-                    st.stop()
-                    
-                email_clean = email_input.strip().lower()
-                
-                # Check the Supabase database
-                with st.spinner("Verifying access..."):
-                    user_row = check_whitelist_and_get_user(email_clean)
-                    
-                if user_row:
-                    # Login Success
-                    st.session_state.connected = True
-                    st.session_state.email = user_row["email"]
-                    st.session_state.name = user_row["name"]
-                    st.rerun()
-                else:
-                    # Login Failed
-                    st.error(f"⛔ Access Denied: '{email_clean}' is not on the approved list. Contact the Preparatory Committee.")
-                    st.stop()
+            # Render the Google Sign-In button
+            authenticator.login()
 
-    st.markdown('<div class="footer">PrepCo · IIM Nagpur Preparatory Committee · 2024–25</div>', unsafe_allow_html=True)
+    st.markdown('<div class="footer">PrepCo · IIM Nagpur Preparatory Committee · 2025–27</div>', unsafe_allow_html=True)
     st.stop()
 # ──────────────────────────────────────────────
 # GEMINI HELPER
@@ -508,7 +487,7 @@ def scrape_website(url: str) -> str | None:
 # ──────────────────────────────────────────────
 # TOOL 1 — RESUME AGENT
 # ──────────────────────────────────────────────
-def tool_resume(user_row: dict):
+def tool_resume(email: str):
     st.markdown("### 📝 Resume Agent")
     st.caption("Transform rough notes into IIMN-compliant CV bullet points.")
 
@@ -520,16 +499,13 @@ def tool_resume(user_row: dict):
             st.warning("Please enter some experience text first.")
             return
             
-        active_provider = st.session_state.get("active_ai_provider", "Default (System Gemini)")
-        is_custom_provider = active_provider != "Default (System Gemini)"
-        
-        if not is_custom_provider:
-            if user_row["runs"] >= LIFETIME_RUN_LIMIT:
-                st.error(f"You've reached your lifetime limit of {LIFETIME_RUN_LIMIT} runs. Please configure your own API key in the sidebar to continue.")
-                return
+        key = get_stored_key(email)
+        if not key:
+            st.error("⚠️ Gemini API Key not configured. Please enter and save your Gemini API Key in the sidebar expander to use this tool.")
+            return
 
         with st.spinner("Optimising and validating character limits for IIMN guidelines..."):
-            client, model_name = get_ai_client(user_row["email"])
+            client, model_name = get_ai_client(email)
             
             prompt = f"""ROLE: IIM Nagpur Resume Optimization Engine.
 TASK: Convert the input text into 3 high-impact resume bullet points tailored to specific domains.
@@ -647,9 +623,6 @@ Each of these three bullet points must be strictly between 115 and 122 character
                         current_prompt = feedback
                 
                 if json_data:
-                    runs = increment_runs(user_row["email"])
-                    user_row["runs"] = runs
-                    
                     c_pt = json_data.get("consulting", "")
                     f_pt = json_data.get("finance", "")
                     o_pt = json_data.get("ops", "")
@@ -686,7 +659,7 @@ Each of these three bullet points must be strictly between 115 and 122 character
 # ──────────────────────────────────────────────
 # TOOL 2 — INTERVIEW INTEL AGENT
 # ──────────────────────────────────────────────
-def tool_interview(user_row: dict):
+def tool_interview(email: str):
     st.markdown("### 🎯 Interview Intel Agent")
     st.caption("Generate a 5-minute research dossier for your upcoming interview.")
 
@@ -704,13 +677,10 @@ def tool_interview(user_row: dict):
             st.warning("Please enter both the Company Name and the Job Role.")
             return
             
-        active_provider = st.session_state.get("active_ai_provider", "Default (System Gemini)")
-        is_custom_provider = active_provider != "Default (System Gemini)"
-        
-        if not is_custom_provider:
-            if user_row["runs"] >= LIFETIME_RUN_LIMIT:
-                st.error(f"You've reached your lifetime limit of {LIFETIME_RUN_LIMIT} runs. Please configure your own API key in the sidebar to continue.")
-                return
+        key = get_stored_key(email)
+        if not key:
+            st.error("⚠️ Gemini API Key not configured. Please enter and save your Gemini API Key in the sidebar expander to use this tool.")
+            return
 
         with st.spinner(f"Deploying agents to research {company_name}..."):
             live_context = ""
@@ -722,7 +692,7 @@ def tool_interview(user_row: dict):
                 else:
                     st.warning("⚠️ Could not read the website. Proceeding with AI knowledge.")
 
-            client, model_name = get_ai_client(user_row["email"])
+            client, model_name = get_ai_client(email)
             prompt = f"""
  Act as an elite corporate intelligence researcher and MBA Career Coach. Your task is to generate a comprehensive but highly scannable "5-Minute Interview Dossier" for a candidate interviewing at {company_name} for the {job_role} position.
                 {live_context}
@@ -774,8 +744,6 @@ def tool_interview(user_row: dict):
             try:
                 response = client.generate_content(prompt)
                 response_text = response.text
-                runs = increment_runs(user_row["email"])
-                user_row["runs"] = runs
 
                 st.success(f"✅ Briefing generated! — Model: `{model_name}`")
                 st.markdown("---")
@@ -834,58 +802,12 @@ def tool_ats_checker():
 # ──────────────────────────────────────────────
 # ADMIN DASHBOARD
 # ──────────────────────────────────────────────
-def admin_dashboard():
-    st.markdown("### 🛡️ Admin Dashboard")
-    st.caption("Committee view — usage analytics across all students.")
-
-    data = get_all_usage()
-    if not data:
-        st.info("No usage data yet.")
-        return
-
-    total_runs  = sum(d["runs"] for d in data)
-    active_users = sum(1 for d in data if d["runs"] > 0)
-    top_user    = data[0] if data else {}
-
-    c1, c2, c3, c4 = st.columns(4)
-    c1.metric("Total runs", total_runs)
-    c2.metric("Students registered", len(data))
-    c3.metric("Active users", active_users)
-    c4.metric("Top user runs", top_user.get("runs", 0))
-
-    st.markdown("#### Usage per student")
-    for row in data:
-        pct = min(row["runs"] / LIFETIME_RUN_LIMIT, 1.0)
-        col_a, col_b = st.columns([4, 1])
-        with col_a:
-            st.markdown(f"**{row['name']}** `{row['email']}`")
-            st.markdown(
-                f'<div class="quota-bar-wrap"><div class="quota-bar-fill" style="width:{pct*100:.0f}%"></div></div>',
-                unsafe_allow_html=True
-            )
-        with col_b:
-            st.markdown(f"**{row['runs']}** / {LIFETIME_RUN_LIMIT}")
-        st.markdown("")
-
-    if st.button("⬇️ Export as JSON"):
-        st.download_button("Download usage.json", json.dumps(data, indent=2, default=str),
-                           "prepco_usage.json", "application/json")
-
 # ──────────────────────────────────────────────
 # MAIN APP
 # ──────────────────────────────────────────────
 def main():
     # ── Auth ──────────────────────────────────
     email, name, picture = login_wall()
-
-    # ── Load user row ─────────────────
-    if SUPABASE_URL and SUPABASE_KEY:
-        user_row = check_whitelist_and_get_user(email)
-    else:
-        st.error("Supabase database is not connected. Whitelist offline.")
-        st.stop()
-
-    runs_left = LIFETIME_RUN_LIMIT - user_row["runs"]
 
     # ── Compact Header ────────────────────────
     st.markdown("""
@@ -923,63 +845,39 @@ def main():
         
         stored_gemini = get_stored_key(email)
 
-        # Active AI Provider Dropdown
-        st.markdown("### 🤖 Active AI Provider")
-        
-        provider_options = [
-            "Default (System Gemini)",
-            "Custom Gemini Key"
-        ]
-        
-        provider_labels = [
-            "Default (System Gemini)",
-            f"Custom Gemini Key ({'Stored' if stored_gemini else 'No Key'})"
-        ]
-                
-        current_selection = st.session_state.get("active_ai_provider", "Default (System Gemini)")
-        if current_selection not in provider_options:
-            current_selection = "Default (System Gemini)"
-        sel_idx = provider_options.index(current_selection)
-        
-        active_provider_label = st.selectbox(
-            "Select API Key Provider",
-            provider_labels,
-            index=sel_idx,
-            label_visibility="collapsed",
-            help="Choose between default system limits or your own API key to bypass run limits."
-        )
-        active_provider = provider_options[provider_labels.index(active_provider_label)]
-        st.session_state["active_ai_provider"] = active_provider
-
-        # Quota Visualization or Custom Key Active Status
-        is_custom_provider = active_provider != "Default (System Gemini)"
-        if is_custom_provider:
+        # Dynamic Key Status Card
+        if stored_gemini:
+            model_name = st.session_state.get("custom_model_gemini", "gemini-2.5-flash")
             st.markdown(f"""
-            <div style="margin-bottom: 2rem;">
-              <div style="font-size:12px;color:#22c55e;margin-bottom:4px;font-weight:600;">
-                🟢 Custom Key Active (Gemini)
-              </div>
-              <div style="font-size:11px;color:#64748b;">
-                System run limits bypassed. Tokens billed to your account.
-              </div>
+            <div style="background: rgba(34, 197, 94, 0.08); border: 1px solid rgba(34, 197, 94, 0.2); border-radius: 12px; padding: 12px; margin-bottom: 1.5rem;">
+                <div style="font-size: 12px; color: #15803d; font-weight: 600; display: flex; align-items: center; gap: 6px;">
+                    <span style="display:inline-block; width:8px; height:8px; background:#22c55e; border-radius:50%;"></span>
+                    Gemini Key Configured
+                </div>
+                <div style="font-size: 11px; color: #166534; margin-top: 4px;">
+                    Model: <code>{model_name}</code>
+                </div>
             </div>
             """, unsafe_allow_html=True)
+            # Inject session active provider selection
+            st.session_state["active_ai_provider"] = "Custom Gemini Key"
         else:
-            pct = max(0, min(runs_left / LIFETIME_RUN_LIMIT, 1.0))
-            color = "#4f46e5" if pct > 0.4 else ("#f59e0b" if pct > 0.15 else "#ef4444")
-            st.markdown(f"""
-            <div style="margin-bottom: 2rem;">
-              <div style="font-size:12px;color:#888;margin-bottom:4px">
-                Runs remaining: <strong>{runs_left}</strong> of {LIFETIME_RUN_LIMIT}
-              </div>
-              <div class="quota-bar-wrap" style="margin:0;">
-                <div class="quota-bar-fill" style="width:{pct*100:.0f}%;background:{color}"></div>
-              </div>
+            st.markdown("""
+            <div style="background: rgba(239, 68, 68, 0.08); border: 1px solid rgba(239, 68, 68, 0.2); border-radius: 12px; padding: 12px; margin-bottom: 1.5rem;">
+                <div style="font-size: 12px; color: #b91c1c; font-weight: 600; display: flex; align-items: center; gap: 6px;">
+                    <span style="display:inline-block; width:8px; height:8px; background:#ef4444; border-radius:50%;"></span>
+                    Gemini Key Required
+                </div>
+                <div style="font-size: 11px; color: #991b1b; margin-top: 4px;">
+                    Please enter your key in the expander below to enable tools.
+                </div>
             </div>
             """, unsafe_allow_html=True)
+            # Default to System Gemini if no custom key is configured, but it will error upon tool click
+            st.session_state["active_ai_provider"] = "Default (System Gemini)"
 
         # Custom Keys Management Expander
-        with st.expander("🔑 Configure Gemini Key", expanded=False):
+        with st.expander("🔑 Configure Gemini Key", expanded=not bool(stored_gemini)):
             st.markdown("<p style='font-size:11px;color:#64748b;margin:0 0 8px 0;'>Save your personal Gemini API key. It persists across sessions.</p>", unsafe_allow_html=True)
             
             input_key = st.text_input(
@@ -1018,42 +916,28 @@ def main():
         st.markdown("### 🧰 Tools Menu")
         if st.button("📝 Resume Agent", use_container_width=True):
             st.session_state["tool"] = "resume"
-            st.session_state["page"] = "home"
         if st.button("🎯 Interview Intel", use_container_width=True):
             st.session_state["tool"] = "interview"
-            st.session_state["page"] = "home"
         if st.button("📁 Prep Documents", use_container_width=True):
             st.session_state["tool"] = "drive"
-            st.session_state["page"] = "home"
         if st.button("🤖 ATS Score Checker", use_container_width=True):
             st.session_state["tool"] = "ats"
-            st.session_state["page"] = "home"
             
         st.markdown("<br><br><br>", unsafe_allow_html=True)
         st.markdown("---")
         
-        if email.strip() in [a.strip() for a in ADMIN_EMAILS if a.strip()]:
-            if st.button("🛡️ Admin Dashboard", use_container_width=True):
-                st.session_state["page"] = "admin"
-                
         if st.button("🚪 Logout", use_container_width=True):
+            if "authenticator" in st.session_state:
+                st.session_state.authenticator.logout()
             st.session_state.connected = False
             st.rerun()
-
-    # ── Admin page ────────────────────────────
-    if st.session_state.get("page") == "admin":
-        if email.strip() in [a.strip() for a in ADMIN_EMAILS if a.strip()]:
-            admin_dashboard()
-        else:
-            st.error("Access denied.")
-        return
 
     # ── Render selected tool ──────────────────
     tool = st.session_state.get("tool", "resume")
     if tool == "resume":
-        tool_resume(user_row)
+        tool_resume(email)
     elif tool == "interview":
-        tool_interview(user_row)
+        tool_interview(email)
     elif tool == "drive":
         tool_drive_documents()
     elif tool == "ats":
