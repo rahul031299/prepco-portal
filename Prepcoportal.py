@@ -5,6 +5,7 @@ from bs4 import BeautifulSoup
 from supabase import create_client, Client
 import json
 from datetime import datetime, timezone
+import os
 
 
 
@@ -277,6 +278,215 @@ ADMIN_EMAILS        = st.secrets.get("ADMIN_EMAILS", "").split(",")
 DRIVE_FOLDER_ID     = st.secrets.get("DRIVE_FOLDER_ID", "")
 ATS_WEBSITE_URL     = st.secrets.get("ATS_WEBSITE_URL", "https://resumeframe.com/")
 
+
+# ──────────────────────────────────────────────
+# PERSISTENT USER API KEYS CONFIGURATION
+# ──────────────────────────────────────────────
+KEYS_FILE_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), ".user_api_keys.json")
+
+def load_user_keys() -> dict:
+    if os.path.exists(KEYS_FILE_PATH):
+        try:
+            with open(KEYS_FILE_PATH, "r") as f:
+                return json.load(f)
+        except Exception:
+            pass
+    return {}
+
+def save_user_keys(keys_data: dict):
+    try:
+        with open(KEYS_FILE_PATH, "w") as f:
+            json.dump(keys_data, f, indent=2)
+    except Exception:
+        pass
+
+def get_stored_key(email: str, provider: str) -> str:
+    all_keys = load_user_keys()
+    user_keys = all_keys.get(email, {})
+    return user_keys.get(provider, "")
+
+def set_stored_key(email: str, provider: str, key: str):
+    all_keys = load_user_keys()
+    if email not in all_keys:
+        all_keys[email] = {}
+    all_keys[email][provider] = key
+    save_user_keys(all_keys)
+
+
+class ChatResponseWrapper:
+    def __init__(self, text: str):
+        self.text = text
+
+
+class AIProviderClient:
+    def __init__(self, provider: str, api_key: str, model_name: str):
+        self.provider = provider
+        self.api_key = api_key
+        self.model_name = model_name
+        self.history = []
+
+    def generate_content(self, prompt: str) -> str:
+        """Single-turn generation."""
+        if self.provider == "Gemini":
+            import google.generativeai as genai
+            genai.configure(api_key=self.api_key)
+            model = genai.GenerativeModel(self.model_name)
+            response = model.generate_content(prompt)
+            return response.text
+
+        elif self.provider == "OpenAI":
+            headers = {
+                "Authorization": f"Bearer {self.api_key}",
+                "Content-Type": "application/json"
+            }
+            payload = {
+                "model": self.model_name,
+                "messages": [{"role": "user", "content": prompt}]
+            }
+            res = requests.post("https://api.openai.com/v1/chat/completions", headers=headers, json=payload, timeout=30)
+            if res.status_code != 200:
+                try:
+                    err_msg = res.json()["error"]["message"]
+                except Exception:
+                    err_msg = res.text
+                raise Exception(f"OpenAI API Error: {err_msg}")
+            return res.json()["choices"][0]["message"]["content"]
+
+        elif self.provider == "Anthropic":
+            headers = {
+                "x-api-key": self.api_key,
+                "anthropic-version": "2023-06-01",
+                "content-type": "application/json"
+            }
+            payload = {
+                "model": self.model_name,
+                "max_tokens": 4000,
+                "messages": [{"role": "user", "content": prompt}]
+            }
+            res = requests.post("https://api.anthropic.com/v1/messages", headers=headers, json=payload, timeout=30)
+            if res.status_code != 200:
+                try:
+                    err_msg = res.json()["error"]["message"]
+                except Exception:
+                    err_msg = res.text
+                raise Exception(f"Anthropic API Error: {err_msg}")
+            return res.json()["content"][0]["text"]
+
+        else:
+            raise ValueError(f"Unknown provider: {self.provider}")
+
+    def start_chat(self, history=None):
+        self.history = []
+        return self
+
+    def send_message(self, message: str) -> ChatResponseWrapper:
+        """Send a message in a multi-turn chat session."""
+        if self.provider == "Gemini":
+            import google.generativeai as genai
+            genai.configure(api_key=self.api_key)
+            model = genai.GenerativeModel(self.model_name)
+            
+            gemini_history = []
+            for h in self.history:
+                role = "user" if h["role"] == "user" else "model"
+                gemini_history.append({"role": role, "parts": [h["content"]]})
+                
+            chat = model.start_chat(history=gemini_history)
+            response = chat.send_message(message)
+            
+            self.history.append({"role": "user", "content": message})
+            self.history.append({"role": "assistant", "content": response.text})
+            return ChatResponseWrapper(response.text)
+
+        elif self.provider == "OpenAI":
+            self.history.append({"role": "user", "content": message})
+            headers = {
+                "Authorization": f"Bearer {self.api_key}",
+                "Content-Type": "application/json"
+            }
+            payload = {
+                "model": self.model_name,
+                "messages": self.history
+            }
+            res = requests.post("https://api.openai.com/v1/chat/completions", headers=headers, json=payload, timeout=30)
+            if res.status_code != 200:
+                try:
+                    err_msg = res.json()["error"]["message"]
+                except Exception:
+                    err_msg = res.text
+                raise Exception(f"OpenAI API Error: {err_msg}")
+            reply = res.json()["choices"][0]["message"]["content"]
+            self.history.append({"role": "assistant", "content": reply})
+            return ChatResponseWrapper(reply)
+
+        elif self.provider == "Anthropic":
+            self.history.append({"role": "user", "content": message})
+            headers = {
+                "x-api-key": self.api_key,
+                "anthropic-version": "2023-06-01",
+                "content-type": "application/json"
+            }
+            payload = {
+                "model": self.model_name,
+                "max_tokens": 4000,
+                "messages": self.history
+            }
+            res = requests.post("https://api.anthropic.com/v1/messages", headers=headers, json=payload, timeout=30)
+            if res.status_code != 200:
+                try:
+                    err_msg = res.json()["error"]["message"]
+                except Exception:
+                    err_msg = res.text
+                raise Exception(f"Anthropic API Error: {err_msg}")
+            reply = res.json()["content"][0]["text"]
+            self.history.append({"role": "assistant", "content": reply})
+            return ChatResponseWrapper(reply)
+
+        else:
+            raise ValueError(f"Unknown provider: {self.provider}")
+
+
+def get_ai_client(email: str):
+    """Retrieve active AI client based on sidebar selection."""
+    active_selection = st.session_state.get("active_ai_provider", "Default (System Gemini)")
+    
+    if active_selection == "Default (System Gemini)":
+        system_key = st.secrets.get("GEMINI_API_KEY", "").strip()
+        if not system_key:
+            st.error("System Gemini API Key is missing. Please select a custom provider and configure your API key.")
+            st.stop()
+        # Find best system model name
+        _, system_model_name = get_gemini_model()
+        return AIProviderClient("Gemini", system_key, system_model_name), system_model_name
+        
+    elif active_selection == "Custom Gemini":
+        key = get_stored_key(email, "Gemini")
+        if not key:
+            st.error("Custom Gemini API Key not found. Please add and save your key under 'Manage Custom Keys' in the sidebar.")
+            st.stop()
+        model_name = st.session_state.get("custom_model_gemini", "gemini-2.5-flash")
+        return AIProviderClient("Gemini", key, model_name), model_name
+        
+    elif active_selection == "Custom OpenAI":
+        key = get_stored_key(email, "OpenAI")
+        if not key:
+            st.error("Custom OpenAI API Key not found. Please add and save your key under 'Manage Custom Keys' in the sidebar.")
+            st.stop()
+        model_name = st.session_state.get("custom_model_openai", "gpt-4o-mini")
+        return AIProviderClient("OpenAI", key, model_name), model_name
+        
+    elif active_selection == "Custom Anthropic":
+        key = get_stored_key(email, "Anthropic")
+        if not key:
+            st.error("Custom Anthropic API Key not found. Please add and save your key under 'Manage Custom Keys' in the sidebar.")
+            st.stop()
+        model_name = st.session_state.get("custom_model_anthropic", "claude-3-5-haiku-latest")
+        return AIProviderClient("Anthropic", key, model_name), model_name
+        
+    else:
+        st.error(f"Unknown active provider: {active_selection}")
+        st.stop()
+
 # ──────────────────────────────────────────────
 # SUPABASE CLIENT
 # ──────────────────────────────────────────────
@@ -439,12 +649,17 @@ def tool_resume(user_row: dict):
         if not user_text.strip():
             st.warning("Please enter some experience text first.")
             return
-        if user_row["runs"] >= LIFETIME_RUN_LIMIT:
-            st.error(f"You've reached your lifetime limit of {LIFETIME_RUN_LIMIT} runs.")
-            return
+            
+        active_provider = st.session_state.get("active_ai_provider", "Default (System Gemini)")
+        is_custom_provider = active_provider != "Default (System Gemini)"
+        
+        if not is_custom_provider:
+            if user_row["runs"] >= LIFETIME_RUN_LIMIT:
+                st.error(f"You've reached your lifetime limit of {LIFETIME_RUN_LIMIT} runs. Please configure your own API key in the sidebar to continue.")
+                return
 
         with st.spinner("Optimising and validating character limits for IIMN guidelines..."):
-            model, model_name = get_gemini_model()
+            client, model_name = get_ai_client(user_row["email"])
             
             prompt = f"""ROLE: IIM Nagpur Resume Optimization Engine.
 TASK: Convert the input text into 3 high-impact resume bullet points tailored to specific domains.
@@ -485,7 +700,7 @@ The JSON must contain exactly three keys:
 Each of these three bullet points must be strictly between 115 and 122 characters long (inclusive of spaces).
 """
             try:
-                chat = model.start_chat(history=[])
+                chat = client.start_chat(history=[])
                 current_prompt = prompt
                 valid = False
                 json_data = None
@@ -571,10 +786,10 @@ Each of these three bullet points must be strictly between 115 and 122 character
                     
                     display_text = f"""1. **Consulting/Strategy Style** ({len(c_pt)} chars):
    {c_pt}
-
+ 
 2. **Finance/Analytical Style** ({len(f_pt)} chars):
    {f_pt}
-
+ 
 3. **General Mgmt/Ops Style** ({len(o_pt)} chars):
    {o_pt}"""
                     
@@ -618,9 +833,14 @@ def tool_interview(user_row: dict):
         if not company_name or not job_role:
             st.warning("Please enter both the Company Name and the Job Role.")
             return
-        if user_row["runs"] >= LIFETIME_RUN_LIMIT:
-            st.error(f"You've reached your lifetime limit of {LIFETIME_RUN_LIMIT} runs.")
-            return
+            
+        active_provider = st.session_state.get("active_ai_provider", "Default (System Gemini)")
+        is_custom_provider = active_provider != "Default (System Gemini)"
+        
+        if not is_custom_provider:
+            if user_row["runs"] >= LIFETIME_RUN_LIMIT:
+                st.error(f"You've reached your lifetime limit of {LIFETIME_RUN_LIMIT} runs. Please configure your own API key in the sidebar to continue.")
+                return
 
         with st.spinner(f"Deploying agents to research {company_name}..."):
             live_context = ""
@@ -632,7 +852,7 @@ def tool_interview(user_row: dict):
                 else:
                     st.warning("⚠️ Could not read the website. Proceeding with AI knowledge.")
 
-            model, model_name = get_gemini_model()
+            client, model_name = get_ai_client(user_row["email"])
             prompt = f"""
  Act as an elite corporate intelligence researcher and MBA Career Coach. Your task is to generate a comprehensive but highly scannable "5-Minute Interview Dossier" for a candidate interviewing at {company_name} for the {job_role} position.
                 {live_context}
@@ -682,15 +902,15 @@ def tool_interview(user_row: dict):
                   * *Why this works:* [Brief rationale]
 """
             try:
-                response = model.generate_content(prompt)
+                response_text = client.generate_content(prompt)
                 runs = increment_runs(user_row["email"])
                 user_row["runs"] = runs
 
                 st.success(f"✅ Briefing generated! — Model: `{model_name}`")
                 st.markdown("---")
-                st.markdown(response.text)
+                st.markdown(response_text)
                 with st.expander("Copy raw text"):
-                    st.text_area("", response.text, height=300)
+                    st.text_area("", response_text, height=300)
             except Exception as e:
                 if "429" in str(e):
                     st.error("⚠️ Rate limit hit — please wait 60 seconds and try again.")
@@ -818,19 +1038,124 @@ def main():
         </div>
         """, unsafe_allow_html=True)
         
-        pct = max(0, min(runs_left / LIFETIME_RUN_LIMIT, 1.0))
-        color = "#4f46e5" if pct > 0.4 else ("#f59e0b" if pct > 0.15 else "#ef4444")
-        st.markdown(f"""
-        <div style="margin-bottom: 2rem;">
-          <div style="font-size:12px;color:#888;margin-bottom:4px">
-            Runs remaining: <strong>{runs_left}</strong> of {LIFETIME_RUN_LIMIT}
-          </div>
-          <div class="quota-bar-wrap" style="margin:0;">
-            <div class="quota-bar-fill" style="width:{pct*100:.0f}%;background:{color}"></div>
-          </div>
-        </div>
-        """, unsafe_allow_html=True)
+        stored_gemini = get_stored_key(email, "Gemini")
+        stored_openai = get_stored_key(email, "OpenAI")
+        stored_anthropic = get_stored_key(email, "Anthropic")
+
+        # Active AI Provider Dropdown
+        st.markdown("### 🤖 Active AI Provider")
         
+        provider_options = [
+            "Default (System Gemini)",
+            "Custom Gemini",
+            "Custom OpenAI",
+            "Custom Anthropic"
+        ]
+        
+        provider_labels = []
+        for opt in provider_options:
+            if opt == "Default (System Gemini)":
+                provider_labels.append(opt)
+            elif opt == "Custom Gemini":
+                provider_labels.append(opt + (" (Stored)" if stored_gemini else " (No Key)"))
+            elif opt == "Custom OpenAI":
+                provider_labels.append(opt + (" (Stored)" if stored_openai else " (No Key)"))
+            elif opt == "Custom Anthropic":
+                provider_labels.append(opt + (" (Stored)" if stored_anthropic else " (No Key)"))
+                
+        current_selection = st.session_state.get("active_ai_provider", "Default (System Gemini)")
+        if current_selection not in provider_options:
+            current_selection = "Default (System Gemini)"
+        sel_idx = provider_options.index(current_selection)
+        
+        active_provider_label = st.selectbox(
+            "Select API Key Provider",
+            provider_labels,
+            index=sel_idx,
+            label_visibility="collapsed",
+            help="Choose between default system limits or your own API key to bypass run limits."
+        )
+        active_provider = provider_options[provider_labels.index(active_provider_label)]
+        st.session_state["active_ai_provider"] = active_provider
+
+        # Quota Visualization or Custom Key Active Status
+        is_custom_provider = active_provider != "Default (System Gemini)"
+        if is_custom_provider:
+            st.markdown(f"""
+            <div style="margin-bottom: 2rem;">
+              <div style="font-size:12px;color:#22c55e;margin-bottom:4px;font-weight:600;">
+                🟢 Custom Key Active ({active_provider.replace("Custom ", "")})
+              </div>
+              <div style="font-size:11px;color:#64748b;">
+                System run limits bypassed. Tokens billed to your account.
+              </div>
+            </div>
+            """, unsafe_allow_html=True)
+        else:
+            pct = max(0, min(runs_left / LIFETIME_RUN_LIMIT, 1.0))
+            color = "#4f46e5" if pct > 0.4 else ("#f59e0b" if pct > 0.15 else "#ef4444")
+            st.markdown(f"""
+            <div style="margin-bottom: 2rem;">
+              <div style="font-size:12px;color:#888;margin-bottom:4px">
+                Runs remaining: <strong>{runs_left}</strong> of {LIFETIME_RUN_LIMIT}
+              </div>
+              <div class="quota-bar-wrap" style="margin:0;">
+                <div class="quota-bar-fill" style="width:{pct*100:.0f}%;background:{color}"></div>
+              </div>
+            </div>
+            """, unsafe_allow_html=True)
+
+        # Custom Keys Management Expander
+        with st.expander("🔑 Manage Custom Keys", expanded=False):
+            st.markdown("<p style='font-size:11px;color:#64748b;margin:0 0 8px 0;'>Save API keys securely for each platform. They persist across session reloads.</p>", unsafe_allow_html=True)
+            
+            key_provider = st.selectbox(
+                "Select LLM Platform",
+                ["Gemini", "OpenAI", "Anthropic"],
+                key="manage_key_provider"
+            )
+            
+            current_key = get_stored_key(email, key_provider)
+            input_key = st.text_input(
+                f"{key_provider} API Key",
+                type="password",
+                value=current_key,
+                placeholder=f"Enter {key_provider} Key"
+            )
+            
+            if key_provider == "Gemini":
+                custom_models = ["gemini-2.5-flash", "gemini-2.5-pro", "gemini-1.5-flash", "gemini-1.5-pro"]
+                state_key = "custom_model_gemini"
+            elif key_provider == "OpenAI":
+                custom_models = ["gpt-4o-mini", "gpt-4o", "gpt-3.5-turbo"]
+                state_key = "custom_model_openai"
+            else:
+                custom_models = ["claude-3-5-haiku-latest", "claude-3-5-sonnet-latest"]
+                state_key = "custom_model_anthropic"
+                
+            current_model = st.session_state.get(state_key, custom_models[0])
+            if current_model not in custom_models:
+                current_model = custom_models[0]
+                
+            selected_model = st.selectbox(
+                f"Select {key_provider} Model",
+                custom_models,
+                index=custom_models.index(current_model)
+            )
+            st.session_state[state_key] = selected_model
+            
+            col_save, col_del = st.columns(2)
+            with col_save:
+                if st.button("Save Key", use_container_width=True):
+                    set_stored_key(email, key_provider, input_key.strip())
+                    st.success("Saved!")
+                    st.rerun()
+            with col_del:
+                if st.button("Delete Key", use_container_width=True):
+                    set_stored_key(email, key_provider, "")
+                    st.success("Deleted!")
+                    st.rerun()
+
         st.markdown("### 🧰 Tools Menu")
         if st.button("📝 Resume Agent", use_container_width=True):
             st.session_state["tool"] = "resume"
