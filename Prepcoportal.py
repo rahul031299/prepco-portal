@@ -336,7 +336,7 @@ def login_wall():
     # The Login Screen
     st.markdown("""
     <div class='hero'>
-      <h1>PrepCo</h1>
+      <h1>🎯 PrepCo</h1>
       <p>IIM Nagpur · Placement Preparation Portal</p>
     </div>
     """, unsafe_allow_html=True)
@@ -443,178 +443,155 @@ def tool_resume(user_row: dict):
             st.error(f"You've reached your lifetime limit of {LIFETIME_RUN_LIMIT} runs.")
             return
 
-        with st.spinner("Optimising for IIMN guidelines..."):
+        with st.spinner("Optimising and validating character limits for IIMN guidelines..."):
             model, model_name = get_gemini_model()
-            prompt = f"""You are an IIM Nagpur Resume Optimization Engine. Transform raw work experience into recruiter-ready bullet points following PrepCom guidelines STRICTLY.
+            
+            prompt = f"""ROLE: IIM Nagpur Resume Optimization Engine.
+TASK: Convert the input text into 3 high-impact resume bullet points tailored to specific domains.
 
-═══════════════════════════════════════════════════════════════════════════════
-MANDATORY COMPLIANCE RULES (NO EXCEPTIONS)
-═══════════════════════════════════════════════════════════════════════════════
+--- IIM NAGPUR PREPCO GUIDELINES (NON-NEGOTIABLE) ---
+1. LENGTH: Every generated point must be strictly between 115 and 122 characters long (inclusive of spaces). This is a strict constraint.
+2. SYNTAX: Begin each bullet point with a strong action verb. Use Active voice. Prefer past tense, unless it's an ongoing responsibility.
+3. STAR FRAMEWORK: Situation (Context) -> Task -> Action -> Result (Impact).
+4. QUANTIFICATION: You MUST include quantifiable outcomes: numbers, %, timelines, growth metrics. If missing, use placeholders like [X]%. 
+5. CLARITY: Each point must be crisp and result-oriented. A recruiter should understand the impact in 5 seconds.
+6. FORBIDDEN WORDS: Do not write generic or vague points like "worked on a project" or "helped the team".
 
-[1] LENGTH: Strictly 14 words OR 95 characters (whichever comes first). Count EVERY word including articles. VERIFY after generation.
+--- HIGH-IMPACT POWER VERBS TO UTILIZE ---
+* For Consulting/Strategy: Analyzed, Formulated, Recommended, Streamlined, Evaluated, Diagnosed.
+* For Finance/Analytical: Reconciled, Audited, Appraised, Calculated, Forecasted, Projected.
+* For General Mgmt/Ops: Automated, Orchestrated, Executed, Supervised, Spearheaded, Accelerated.
 
-[2] STRUCTURE: Apply STAR Framework
-    → Action (power verb) + Scope + Quantified Result
-    → Example: "Analyzed 5 portfolios, recommended 3 shifts, boosting efficiency by 12%"
-
-[3] START WITH POWER VERB: First word MUST be from categorized list. Use DIFFERENT verbs for all 3 variations.
-
-[4] QUANTIFICATION REQUIRED: Include at least ONE metric:
-    - Percentages (27% improvement)
-    - Numbers (30+ leads, ₹5L, 500 students)
-    - Timelines (3 quarters, 8 hours/week)
-    - Scale (11 firms, 4 departments)
-
-[5] FORBIDDEN WORDS: worked on, helped, assisted, involved in, participated, contributed to, was responsible for, various, multiple
-
-[6] CLARITY TEST: "Can recruiter grasp impact in 5 seconds?" If no, rewrite.
-
-═══════════════════════════════════════════════════════════════════════════════
-POWER VERB LIBRARY (SELECT FROM APPROPRIATE CATEGORY)
-═══════════════════════════════════════════════════════════════════════════════
-
-CONSULTING/STRATEGY
-Analysis: Analyzed, Assessed, Audited, Benchmarked, Diagnosed, Evaluated, Examined, Investigated, Reviewed, Scrutinized, Studied
-Problem-Solving: Brainstormed, Conceptualized, Debugged, Deciphered, Engineered, Formulated, Recommended, Revamped, Streamlined, Synthesized
-Planning: Anticipated, Devised, Forecasted, Identified, Planned, Prioritized, Strategized
-
-FINANCE/ANALYTICS
-Quantitative: Accounted for, Appraised, Approximated, Balanced, Budgeted, Calculated, Compiled, Computed, Conserved, Converted, Enumerated, Estimated, Financed, Grossed, Inventoried, Maximized, Netted, Projected, Quantified, Reconciled, Recorded, Reduced, Tabulated
-Auditing: Audited, Checked, Discovered, Inspected, Measured, Monitored, Tracked, Verified
-
-SALES/BIZ DEV
-Execution: Closed, Converted, Negotiated, Processed, Prospected, Sold, Transacted
-Growth: Accelerated, Boosted, Delivered, Expanded, Generated, Grew, Increased, Launched, Secured
-Communication: Briefed, Clarified, Consulted, Convinced, Demonstrated, Persuaded, Pitched, Presented
-
-MARKETING
-Creation: Authored, Composed, Crafted, Created, Designed, Developed, Drafted, Produced, Wrote
-Optimization: A/B tested, Boosted, Enhanced, Improved, Optimized, Refined, Revamped, Upgraded
-Promotion: Articulated, Communicated, Highlighted, Illustrated, Marketed, Promoted, Publicized
-
-OPERATIONS/PM
-Execution: Activated, Administered, Completed, Conducted, Delivered, Executed, Handled, Implemented, Installed, Operated, Performed, Processed, Produced
-Organization: Allocated, Arranged, Centralized, Coordinated, Customized, Delegated, Established, Facilitated, Incorporated, Logged, Mapped out, Organized, Programmed, Scheduled, Streamlined, Systematized, Tracked
-Optimization: Automated, Consolidated, Eliminated, Simplified, Standardized
-
-LEADERSHIP
-Leading: Accelerated, Chaired, Coached, Directed, Drove, Empowered, Enabled, Guided, Headed, Influenced, Initiated, Inspired, Led, Managed, Mentored, Mobilized, Motivated, Orchestrated, Pioneered, Spearheaded, Steered, Supervised, Trained, Transformed
-Achievement: Accomplished, Achieved, Attained, Delivered, Exceeded, Fulfilled, Realized, Surpassed
-
-HR/PEOPLE
-Support: Accommodated, Advised, Coached, Counseled, Elevated, Enabled, Enhanced, Facilitated, Guided, Mentored, Provided, Supported, Tutored
-Systems: Administered, Built, Designed, Developed, Established, Implemented, Instituted, Standardized
-
-TECHNICAL/DATA
-Development: Automated, Built, Coded, Configured, Debugged, Designed, Developed, Engineered, Integrated, Migrated, Optimized, Programmed, Upgraded
-Analysis: Analyzed, Computed, Diagnosed, Evaluated, Extracted, Modeled, Processed, Tested, Validated
-
-GENERAL HIGH-IMPACT
-Amplified, Augmented, Eclipsed, Expedited, Innovated, Integrated, Modernized, Overcame, Rejuvenated, Revitalized, Strengthened, Transformed, Uncovered
-
-═══════════════════════════════════════════════════════════════════════════════
-OFFICIAL EXAMPLES (FROM PREPCOM GUIDE)
-═══════════════════════════════════════════════════════════════════════════════
-
-SALES: "Converted 30+ B2B leads via cold calls, achieving 20% monthly revenue growth" [12 words, 78 chars]
-MARKETING: "Boosted Meta Ads ROAS by 2.1x using A/B tested creatives and landing pages" [13 words, 78 chars]
-CONSULTING: "Analysed 5 client portfolios, recommended 3 strategy shifts, boosting efficiency by 12%" [12 words, 86 chars]
-FINANCE: "Reconciled financial data of 3 quarters, identifying errors worth ₹5L in reporting" [12 words, 79 chars]
-OPERATIONS: "Automated purchase order flow, reducing manual effort by 8 hours/week using workflow tools" [13 words, 88 chars]
-HR: "Built an HR dashboard for attrition tracking, reducing reporting time by 40%" [12 words, 78 chars]
-GEN MGMT: "Led cross-functional team of 8 to execute CSR campaign impacting 500+ rural students" [13 words, 87 chars]
-
-═══════════════════════════════════════════════════════════════════════════════
-PROCESSING WORKFLOW
-═══════════════════════════════════════════════════════════════════════════════
-
-When user provides input:
-
-STEP 1: EXTRACT
-- Task/project completed
-- Specific actions taken
-- Measurable outcomes
-- Tools/methods used
-- Scale/scope
-
-STEP 2: GENERATE 3 VARIATIONS (DIFFERENT ANGLES)
-Variation 1 → ANALYTICAL/STRATEGIC (Analyzed, Evaluated, Identified, Recommended, Optimized)
-Variation 2 → QUANTITATIVE/FINANCIAL (Reduced, Increased, Generated, Calculated, Projected, Saved)
-Variation 3 → LEADERSHIP/EXECUTION (Led, Spearheaded, Executed, Managed, Coordinated, Delivered)
-
-STEP 3: ENFORCE COMPLIANCE
-For EACH variation:
-✓ Count words (=14)
-✓ Count characters (=95)
-✓ Unique power verb
-✓ Quantification present
-✓ No forbidden words
-✓ 5-second clarity
-
-STEP 4: IF VIOLATION → COMPRESS
-- Remove articles (the, a, an)
-- Use abbreviations (ops, dept)
-- Combine concepts
-- Numerals over words (3 not three)
-- Use "via" instead of "by implementing"
+--- TRAINING EXAMPLES (FROM OFFICIAL GUIDE) ---
+* BAD: "Worked on a project."
+* GOOD (Sales): "Converted 30+ B2B leads via cold calls, achieving 20% monthly revenue growth" (87 chars)
+* GOOD (Marketing): "Boosted Meta Ads ROAS by 2.1x using A/B tested creatives and landing pages" (74 chars)
+* GOOD (Consulting): "Analysed 5 client portfolios, recommended 3 strategy shifts, boosting efficiency by 12% and revenue by 8%" (106 chars)
+* GOOD (Finance): "Reconciled financial data of 3 quarters, identifying errors worth ₹5L in reporting and saving 15% budget" (107 chars)
+* GOOD (Operations): "Automated purchase order flow, reducing manual effort by 8 hours/week and increasing processing speed by 25%" (109 chars)
+* GOOD (HR): "Built an HR dashboard for attrition tracking, reducing reporting time by 40% and saving 10 hours of manual work" (113 chars)
+* GOOD (Gen Management): "Led cross-functional team of 8 to execute CSR campaign, impacting 500+ rural students and raising 12% funding" (112 chars)
 
 --- USER INPUT ---
 {user_text}
-═══════════════════════════════════════════════════════════════════════════════
-OUTPUT FORMAT (STRICT)
-═══════════════════════════════════════════════════════════════════════════════
 
-**[DOMAIN] FOCUS**:
-[Bullet point]
+--- OUTPUT INSTRUCTIONS ---
+You must output a JSON object and absolutely nothing else. Do not wrap it in markdown code blocks.
+The JSON must contain exactly three keys:
+1. "consulting": The Consulting/Strategy bullet point
+2. "finance": The Finance/Analytical bullet point
+3. "ops": The General Mgmt/Ops bullet point
 
-✓ Words: [X] | Characters: [Y]
-
-**[DOMAIN] FOCUS**
-[Bullet point]
-
-✓ Words: [X] | Characters: [Y]
-
-**[DOMAIN] FOCUS**
-[Bullet point]
-
-✓ Words: [X] | Characters: [Y]
-
----
-QUALITY CHECKS:
-✓ Unique power verbs: [verb1], [verb2], [verb3]
-
-✓ Quantification: All variations include metrics
-
-✓ Length compliance: All under limits
-
-✓ Clarity: Impact clear in 5 seconds
-
-⚠️ Placeholders: [List any [X]%, [N] used - user must replace]
-
-═══════════════════════════════════════════════════════════════════════════════
-
-DIVERSITY STRATEGY (700 STUDENTS):
-- Rotate verbs within categories (Student A gets "Analyzed," Student B gets "Evaluated")
-- Emphasize different metrics (time vs revenue vs efficiency vs scale)
-- Vary structure (action-first vs scope-first vs stakeholder-first)
-
-COMPRESSION EXAMPLES:
-❌ "by implementing the new system" → ✓ "via new system"
-❌ "on a monthly basis" → ✓ "monthly"
-❌ "the department's operations" → ✓ "dept operations"
-❌ "which resulted in a reduction" → ✓ "reducing"
-
-READY. Awaiting user work experience input.
+Each of these three bullet points must be strictly between 115 and 122 characters long (inclusive of spaces).
 """
             try:
-                response = model.generate_content(prompt)
-                runs = increment_runs(user_row["email"])
-                user_row["runs"] = runs
+                chat = model.start_chat(history=[])
+                current_prompt = prompt
+                valid = False
+                json_data = None
+                
+                # We will try up to 4 iterations to get the length correct
+                for attempt in range(4):
+                    response = chat.send_message(current_prompt)
+                    raw_text = response.text.strip()
+                    
+                    # Strip any markdown code blocks that the model might wrap the JSON in
+                    if raw_text.startswith("```json"):
+                        raw_text = raw_text[7:]
+                    elif raw_text.startswith("```"):
+                        raw_text = raw_text[3:]
+                    if raw_text.endswith("```"):
+                        raw_text = raw_text[:-3]
+                    raw_text = raw_text.strip()
+                    
+                    try:
+                        json_data = json.loads(raw_text)
+                    except Exception as parse_err:
+                        current_prompt = f"Failed to parse JSON. Please return ONLY a valid JSON object. Error: {parse_err}"
+                        continue
+                    
+                    # Standardize JSON keys to consulting, finance, ops
+                    standard_data = {}
+                    for k, v in json_data.items():
+                        kl = k.lower()
+                        if "consult" in kl:
+                            standard_data["consulting"] = v
+                        elif "finance" in kl or "analyt" in kl:
+                            standard_data["finance"] = v
+                        elif "ops" in kl or "mgmt" in kl or "general" in kl:
+                            standard_data["ops"] = v
+                            
+                    # Fill in missing keys using order/position or defaults
+                    keys = list(json_data.keys())
+                    for idx, key in enumerate(["consulting", "finance", "ops"]):
+                        if key not in standard_data:
+                            if idx < len(keys):
+                                standard_data[key] = json_data[keys[idx]]
+                            else:
+                                standard_data[key] = ""
+                                
+                    json_data = standard_data
+                    
+                    # Verify character counts
+                    invalid_reasons = []
+                    for key in ["consulting", "finance", "ops"]:
+                        val = json_data[key].strip()
+                        # If model surrounded it with quotes, clean it
+                        if val.startswith('"') and val.endswith('"'):
+                            val = val[1:-1].strip()
+                        elif val.startswith("'") and val.endswith("'"):
+                            val = val[1:-1].strip()
+                        
+                        json_data[key] = val
+                        char_count = len(val)
+                        
+                        if not (115 <= char_count <= 122):
+                            invalid_reasons.append(
+                                f"'{key}' point \"{val}\" is {char_count} characters. Must be between 115 and 122 characters."
+                            )
+                            
+                    if not invalid_reasons:
+                        valid = True
+                        break
+                    else:
+                        feedback = (
+                            "The following points did not meet the strict length limit of 115 to 122 characters (inclusive, with spaces):\n"
+                            + "\n".join(invalid_reasons) +
+                            "\n\nPlease rewrite ONLY those invalid points. Adjust wording or spacing so the final string length is strictly between 115 and 122 characters (e.g. by adding details or choosing shorter/longer words). Return the complete updated JSON with all 3 keys."
+                        )
+                        current_prompt = feedback
+                
+                if json_data:
+                    runs = increment_runs(user_row["email"])
+                    user_row["runs"] = runs
+                    
+                    c_pt = json_data.get("consulting", "")
+                    f_pt = json_data.get("finance", "")
+                    o_pt = json_data.get("ops", "")
+                    
+                    display_text = f"""1. **Consulting/Strategy Style** ({len(c_pt)} chars):
+   {c_pt}
 
-                st.success(f"✅ Points generated following IIMN Prep Comm Guidelines. — Model: `{model_name}`")
-                st.markdown(response.text)
-                with st.expander("Copy raw text"):
-                    st.text_area("", response.text, height=200)
+2. **Finance/Analytical Style** ({len(f_pt)} chars):
+   {f_pt}
+
+3. **General Mgmt/Ops Style** ({len(o_pt)} chars):
+   {o_pt}"""
+                    
+                    copy_text = f"""1. **Consulting/Strategy Style**: {c_pt}
+2. **Finance/Analytical Style**: {f_pt}
+3. **General Mgmt/Ops Style**: {o_pt}"""
+                    
+                    if valid:
+                        st.success(f"✅ Points generated following IIMN Prep Comm Guidelines (all strictly 115-122 characters). — Model: `{model_name}`")
+                    else:
+                        st.warning(f"⚠️ Points generated, but some could not be fit into the 115-122 character limit after multiple iterations. — Model: `{model_name}`")
+                        
+                    st.markdown(display_text)
+                    with st.expander("Copy raw text"):
+                        st.text_area("", copy_text, height=200)
+                else:
+                    st.error("Could not generate valid points. Please try again.")
             except Exception as e:
                 if "429" in str(e):
                     st.error("⚠️ Rate limit hit — please wait 60 seconds and try again.")
@@ -625,7 +602,7 @@ READY. Awaiting user work experience input.
 # TOOL 2 — INTERVIEW INTEL AGENT
 # ──────────────────────────────────────────────
 def tool_interview(user_row: dict):
-    st.markdown("### Interview Intel Agent")
+    st.markdown("### 🎯 Interview Intel Agent")
     st.caption("Generate a 5-minute research dossier for your upcoming interview.")
 
     col1, col2 = st.columns(2)
@@ -824,7 +801,7 @@ def main():
     with col1:
         st.markdown("<h5 style='margin: 0; padding-top: 5px; color: #475569;'>IIM Nagpur · Placement Preparation Portal</h5>", unsafe_allow_html=True)
     with col2:
-        st.markdown("<h3 style='margin: 0; text-align: right; background: linear-gradient(135deg, #4f46e5, #d946ef); -webkit-background-clip: text; -webkit-text-fill-color: transparent;'>PrepCo</h3>", unsafe_allow_html=True)
+        st.markdown("<h3 style='margin: 0; text-align: right; background: linear-gradient(135deg, #4f46e5, #d946ef); -webkit-background-clip: text; -webkit-text-fill-color: transparent;'>🎯 PrepCo</h3>", unsafe_allow_html=True)
         
     st.markdown("<div style='height: 1px; background: linear-gradient(90deg, rgba(203, 213, 225, 0.8), transparent); margin: 0.5rem 0 1rem;'></div>", unsafe_allow_html=True)
 
