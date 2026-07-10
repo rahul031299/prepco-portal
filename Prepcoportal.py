@@ -879,3 +879,8 @@ def main():
 
     # ── Footer ────────────────────────────────
     st.markdown('<div class="footer">PrepCo · IIM Nagpur Preparatory Committee · 2025–27 · Built with Streamlit</div>',
+                unsafe_allow_html=True)
+
+
+if __name__ == "__main__":
+    main()
