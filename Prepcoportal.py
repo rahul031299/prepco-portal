@@ -749,7 +749,7 @@ def main():
         user_id_input = st.text_input(
             "Student ID",
             value=st.session_state.get("user_id", ""),
-            placeholder="e.g. p25rahul",
+            placeholder="e.g. P25234",
             help="Enter your unique Student ID to save and load your custom API key."
         ).strip().lower()
         
