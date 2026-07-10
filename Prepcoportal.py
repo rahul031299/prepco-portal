@@ -523,27 +523,33 @@ Each of these three bullet points must be strictly between 115 and 122 character
                     f_pt = json_data.get("finance", "")
                     o_pt = json_data.get("ops", "")
                     
-                    display_text = f"""1. **Consulting/Strategy Style** ({len(c_pt)} chars):
-   {c_pt}
- 
-2. **Finance/Analytical Style** ({len(f_pt)} chars):
-   {f_pt}
- 
-3. **General Mgmt/Ops Style** ({len(o_pt)} chars):
-   {o_pt}"""
-                    
-                    copy_text = f"""1. **Consulting/Strategy Style**: {c_pt}
-2. **Finance/Analytical Style**: {f_pt}
-3. **General Mgmt/Ops Style**: {o_pt}"""
-                    
                     if valid:
                         st.success(f"✅ Points generated following IIMN Prep Comm Guidelines (all strictly 115-122 characters). — Model: `{model_name}`")
                     else:
                         st.warning(f"⚠️ Points generated, but some could not be fit into the 115-122 character limit after multiple iterations. — Model: `{model_name}`")
-                        
-                    st.markdown(display_text)
-                    with st.expander("Copy raw text"):
-                        st.text_area("", copy_text, height=200)
+
+                    # Display each point as a premium card
+                    st.markdown("#### 🎯 Optimized Bullet Points")
+                    
+                    for domain, title, content in [
+                        ("consulting", "💼 Consulting & Strategy Style", c_pt),
+                        ("finance", "📊 Finance & Analytics Style", f_pt),
+                        ("ops", "⚙️ General Management & Operations Style", o_pt)
+                    ]:
+                        with st.container(border=True):
+                            st.markdown(f"""
+                            <div style='display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;'>
+                                <span style='font-family:"Outfit"; font-weight:700; font-size:15px; color:#4f46e5;'>{title}</span>
+                                <span style='font-size:11px; background:#e0e7ff; color:#4f46e5; padding:2px 8px; border-radius:12px; font-weight:600;'>{len(content)} chars</span>
+                            </div>
+                            """, unsafe_allow_html=True)
+                            st.markdown(f"<p style='font-size:15px; color:#1e293b; font-weight:500; line-height:1.4;'>{content}</p>", unsafe_allow_html=True)
+                            st.code(content, language="text")
+                    
+                    # Copy all button section
+                    copy_all_text = f"• {c_pt}\n• {f_pt}\n• {o_pt}"
+                    with st.expander("📋 Copy All Points"):
+                        st.code(copy_all_text, language="text")
                 else:
                     st.error("Could not generate valid points. Please try again.")
             except Exception as e:
@@ -642,10 +648,14 @@ def tool_interview(email: str):
                 response_text = response.text
 
                 st.success(f"✅ Briefing generated! — Model: `{model_name}`")
+                
+                # Copy block at the top
+                with st.expander("📋 Click to Copy Full Briefing", expanded=False):
+                    st.code(response_text, language="markdown")
+                
                 st.markdown("---")
-                st.markdown(response_text)
-                with st.expander("Copy raw text"):
-                    st.text_area("", response_text, height=300)
+                with st.container(border=True):
+                    st.markdown(response_text)
             except Exception as e:
                 if "429" in str(e):
                     st.error("⚠️ Rate limit hit — please wait 60 seconds and try again.")
@@ -702,6 +712,16 @@ def tool_ats_checker():
 # MAIN APP
 # ──────────────────────────────────────────────
 def main():
+    # ── Cookie Persistence ────────────────────
+    import extra_streamlit_components as stx
+    cookie_manager = stx.CookieManager()
+
+    # Try to load user_id from cookie if not already set in session_state
+    if "user_id" not in st.session_state:
+        stored_user_cookie = cookie_manager.get("prepco_user_id")
+        if stored_user_cookie:
+            st.session_state["user_id"] = stored_user_cookie
+
     # ── Compact Header ────────────────────────
     st.markdown("""
     <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.5rem; padding: 0.5rem 0;">
@@ -727,13 +747,20 @@ def main():
     with st.sidebar:
         st.markdown("### 👤 User Identification")
         user_id_input = st.text_input(
-            "Student ID / Name",
+            "Student ID",
             value=st.session_state.get("user_id", ""),
             placeholder="e.g. p25rahul",
-            help="Enter a unique name or ID to save and load your custom API key."
+            help="Enter your unique Student ID to save and load your custom API key."
         ).strip().lower()
         
-        st.session_state["user_id"] = user_id_input
+        # If user_id changed, update session state and cookie
+        if user_id_input != st.session_state.get("user_id", ""):
+            st.session_state["user_id"] = user_id_input
+            if user_id_input:
+                cookie_manager.set("prepco_user_id", user_id_input, max_age=3600*24*365)
+            else:
+                cookie_manager.delete("prepco_user_id")
+            st.rerun()
 
         if not user_id_input:
             st.markdown("""
@@ -743,7 +770,7 @@ def main():
                     Student ID Required
                 </div>
                 <div style="font-size: 11px; color: #991b1b; margin-top: 4px;">
-                    Please enter a Student ID or Name to configure tools.
+                    Please enter a Student ID to configure tools.
                 </div>
             </div>
             """, unsafe_allow_html=True)
@@ -783,7 +810,12 @@ def main():
         if user_id_input:
             # Custom Keys Management Expander
             with st.expander("🔑 Configure Gemini Key", expanded=not bool(stored_gemini)):
-                st.markdown("<p style='font-size:11px;color:#64748b;margin:0 0 8px 0;'>Save your personal Gemini API key. It persists across sessions.</p>", unsafe_allow_html=True)
+                st.markdown("""
+                <p style='font-size:11px;color:#64748b;margin:0 0 8px 0;'>
+                    Save your personal Gemini API key. It persists across sessions.<br>
+                    Don't have a key? <a href="https://aistudio.google.com/" target="_blank" style="color: #4f46e5; font-weight: 600; text-decoration: underline;">Get free Gemini API Key here</a>.
+                </p>
+                """, unsafe_allow_html=True)
                 
                 input_key = st.text_input(
                     "Gemini API Key",
@@ -810,6 +842,8 @@ def main():
                 with col_save:
                     if st.button("Save Key", use_container_width=True):
                         set_stored_key(user_id_input, input_key.strip())
+                        # Save ID to cookie
+                        cookie_manager.set("prepco_user_id", user_id_input, max_age=3600*24*365)
                         st.success("Saved!")
                         st.rerun()
                 with col_del:
@@ -830,7 +864,7 @@ def main():
 
     # ── Render selected tool ──────────────────
     if not user_id_input:
-        st.info("👈 Please identify yourself by entering a Student ID or Name in the sidebar to begin.")
+        st.info("👈 Please identify yourself by entering your Student ID in the sidebar to begin.")
         return
 
     tool = st.session_state.get("tool", "resume")
@@ -845,8 +879,3 @@ def main():
 
     # ── Footer ────────────────────────────────
     st.markdown('<div class="footer">PrepCo · IIM Nagpur Preparatory Committee · 2025–27 · Built with Streamlit</div>',
-                unsafe_allow_html=True)
-
-
-if __name__ == "__main__":
-    main()
